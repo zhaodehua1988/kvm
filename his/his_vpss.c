@@ -1,0 +1,178 @@
+#include "his_vpss.h"
+#include "his_sys.h"
+#include "hi_comm_vpss.h"
+#include "mpi_vpss.h"
+
+
+
+/******************************************************************************
+
+WV_S32  HIS_VPSS_Init(WV_S32 vpssGrp,WV_S32 chnNum,WV_U32 widthMax,WV_U32 heightMax);
+
+******************************************************************************/
+
+WV_S32  HIS_VPSS_Init(WV_S32 vpssGrp,WV_S32 chnNum,WV_U32 width,WV_U32 height,WV_U32  mode)
+{
+    HI_S32   s32Ret;
+    //*** create vpss group  
+		VPSS_GRP_ATTR_S   stVpssGrpAttr;
+        stVpssGrpAttr.enDieMode = VPSS_DIE_MODE_NODIE;
+        stVpssGrpAttr.bIeEn     = HI_FALSE;
+        stVpssGrpAttr.bDciEn    = HI_FALSE;
+        stVpssGrpAttr.bNrEn     = HI_FALSE;
+        stVpssGrpAttr.bHistEn   = HI_FALSE;
+        stVpssGrpAttr.enPixFmt  = PIXEL_FORMAT_YUV_SEMIPLANAR_420;
+        stVpssGrpAttr.u32MaxW   = width;//WV_U32ALIGN_16UP(HIS_SYS_MAX_PICWIDTH);
+        stVpssGrpAttr.u32MaxH   = height;//WV_U32ALIGN_16UP(HIS_SYS_MAX_PICHEIGH);
+      
+   
+        s32Ret = HI_MPI_VPSS_CreateGrp(vpssGrp, &stVpssGrpAttr);
+        if (s32Ret != HI_SUCCESS)
+        {
+            WV_ERROR("HI_MPI_VPSS_CreateGrp[%d] failed with %#x!\n",vpssGrp,s32Ret);
+            return HI_FAILURE;
+        }
+
+        //*** set vpss param *** 
+        VPSS_GRP_PARAM_S stVpssParam ;
+        s32Ret = HI_MPI_VPSS_GetGrpParam(vpssGrp, &stVpssParam);
+        if (s32Ret != HI_SUCCESS)
+        {
+            WV_ERROR("VPSS[%d] GetGrpParam failed with %#x!\n",vpssGrp, s32Ret);
+            return HI_FAILURE;
+        }
+        
+        stVpssParam.u32IeStrength = 0;
+        s32Ret = HI_MPI_VPSS_SetGrpParam(vpssGrp, &stVpssParam);
+        if (s32Ret != HI_SUCCESS)
+        {
+           WV_ERROR("VPSS[%d] SetGrpParam failed with %#x!\n",vpssGrp, s32Ret);
+            return HI_FAILURE;
+        }
+
+        //*** enable vpss chn, with frame  
+        WV_S32 j;
+         VPSS_CHN VpssChn;
+        VPSS_CHN_ATTR_S stChnAttr ={0};
+        for(j=0; j<chnNum; j++)
+        {
+            VpssChn = j;
+            /* Set Vpss Chn attr */
+            stChnAttr.bSpEn = HI_FALSE;
+            stChnAttr.bUVInvert = HI_FALSE;
+            stChnAttr.bBorderEn = HI_FALSE;
+            stChnAttr.stBorder.u32Color = 0xff00;
+            stChnAttr.stBorder.u32LeftWidth = 2;
+            stChnAttr.stBorder.u32RightWidth = 2;
+            stChnAttr.stBorder.u32TopWidth = 2;
+            stChnAttr.stBorder.u32BottomWidth = 2;
+            
+            s32Ret = HI_MPI_VPSS_SetChnAttr(vpssGrp, VpssChn, &stChnAttr);
+            if (s32Ret != HI_SUCCESS)
+            {
+                WV_ERROR("VPSSGRP[%d]HI_MPI_VPSS_SetChnAttr[%d] failed with %#x\n",vpssGrp, VpssChn,s32Ret);
+                return HI_FAILURE;
+            }
+            
+            
+	
+			if(mode == 1)
+			{
+			
+				// set mode
+				VPSS_CHN_MODE_S  vpssChnMode;
+				s32Ret = HI_MPI_VPSS_GetChnMode(vpssGrp,VpssChn,&vpssChnMode);
+					if (s32Ret != HI_SUCCESS)
+					{
+					WV_ERROR("VPSSGRP[%d]HI_MPI_VPSS_GetChnMode[%d] failed with %#x\n",vpssGrp, VpssChn, s32Ret);
+					return HI_FAILURE;
+					}				
+				vpssChnMode.enChnMode			= VPSS_CHN_MODE_USER;//;//VPSS_CHN_MODE_AUTO;//VPSS_CHN_MODE_USER;
+				vpssChnMode.u32Width			= WV_U32ALIGN_16UP(width);
+				vpssChnMode.u32Height			= WV_U32ALIGN_16UP(height);
+				vpssChnMode.enPixelFormat  	    = PIXEL_FORMAT_YUV_SEMIPLANAR_420;
+				vpssChnMode.enCompressMode  	= COMPRESS_MODE_NONE; 
+
+				s32Ret = HI_MPI_VPSS_SetChnMode(vpssGrp,VpssChn,&vpssChnMode);
+					if (s32Ret != HI_SUCCESS)
+					{
+					WV_ERROR("VPSSGRP[%d]HI_MPI_VPSS_SetChnMode[%d] failed with %#x\n",vpssGrp, VpssChn, s32Ret);
+					return HI_FAILURE;
+					}
+				HI_MPI_VPSS_SetDepth(vpssGrp,VpssChn,3); 
+
+				HI_MPI_VPSS_SetGrpDelay(vpssGrp,0);
+	
+	         
+	        }
+	      
+            
+            s32Ret = HI_MPI_VPSS_EnableChn(vpssGrp, VpssChn);
+            if (s32Ret != HI_SUCCESS)
+            {
+                WV_ERROR("VPSSGRP[%d]HI_MPI_VPSS_EnableChn[%d] failed with %#x\n",vpssGrp, VpssChn, s32Ret);
+                return HI_FAILURE;
+            }
+        }
+#if 0
+		VPSS_FRAME_RATE_S stVpssFrameRate;
+		
+		stVpssFrameRate.s32SrcFrmRate = 60;
+		stVpssFrameRate.s32DstFrmRate = 30;
+        HI_MPI_VPSS_SetGrpFrameRate(vpssGrp, &stVpssFrameRate);
+#endif
+       //*** start vpss group ***
+        s32Ret = HI_MPI_VPSS_StartGrp(vpssGrp);
+        if (s32Ret != HI_SUCCESS)
+        {
+             WV_ERROR("VPSSGRP[%d] HI_MPI_VPSS_StartGrp failed with %#x\n",vpssGrp,s32Ret);
+            return HI_FAILURE;
+        }
+        
+        
+       return WV_SOK;
+}
+
+
+/******************************************************************************
+
+WV_S32  HIS_VPSS_DeInit(WV_S32 vpssGrp,WV_S32 chnNum);
+
+******************************************************************************/
+
+WV_S32  HIS_VPSS_DeInit(WV_S32 vpssGrp,WV_S32 chnNum)
+{
+    //  
+ 
+     HI_S32  j;
+    HI_S32 s32Ret = HI_SUCCESS; 
+    VPSS_CHN VpssChn;
+ 
+        s32Ret = HI_MPI_VPSS_StopGrp(vpssGrp);
+        if (s32Ret != HI_SUCCESS)
+        {
+            WV_ERROR( "failed with StopGrp[%d]  %#x!\n",vpssGrp, s32Ret);
+            return HI_FAILURE;
+        }
+        for(j=0; j<chnNum; j++)
+        {
+            VpssChn = j;
+            s32Ret = HI_MPI_VPSS_DisableChn(vpssGrp, VpssChn);
+            if (s32Ret != HI_SUCCESS)
+            {
+               WV_ERROR( "grp[%d]failed  DisableChn [%d] with %#x!\n",vpssGrp ,VpssChn, s32Ret);
+                return HI_FAILURE;
+            }
+        }
+    
+        s32Ret = HI_MPI_VPSS_DestroyGrp(vpssGrp);
+        if (s32Ret != HI_SUCCESS)
+        {
+            WV_ERROR("failed DestroyGrp[%d] with %#x!\n", vpssGrp,s32Ret);
+            return HI_FAILURE;
+        }
+        
+  return WV_SOK;       
+} 
+
+       

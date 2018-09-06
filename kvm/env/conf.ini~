@@ -1,0 +1,16 @@
+BOARD                        
+BD_Vendor                    =WV
+BD_TYPE                      =10
+BD_Date                      =2017:04:12
+BD_Number                    =0
+IPconfigAll                  
+IP_Name                      =eth0
+IP_Mac                       =00:00:01:37:98:00
+IP_Ip                        =192.168.15.98
+IP_Mask                      =255.255.255.0
+IP_Gatway                    =192.168.15.1
+HdmiConfigAll                
+Hdmi_widthMax                =1920
+Hdmi_widthMin                =720
+Hdmi_heightMax               =1200
+Hdmi_heightMin               =240

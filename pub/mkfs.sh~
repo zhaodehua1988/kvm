@@ -1,0 +1,3 @@
+#!/bin/sh 
+./make_ext4fs  -l 7000M -s  ./rootfs_7000M.ext4 ./rootbox
+ 

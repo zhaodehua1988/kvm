@@ -1,0 +1,8 @@
+#ifndef _WV_HIS_VENC_H__
+#define _WV_HIS_VENC_H__
+#include "wv_common.h"  
+WV_S32  HIS_VENC_Init(WV_S32 vencChn,WV_S32 rcMode,WV_S32 Profile,WV_U32 width,WV_U32 height,WV_U32 srcFrmRate,WV_U32 dstFrmRate,WV_U32 bitRate );
+WV_S32  HIS_VENC_DeInit(WV_S32  vencChn);
+WV_S32  HIS_VENC_GetStream(WV_S32  vencChn, WV_U8  *pBuf, WV_U32 *len, WV_U64 * ptsUs);  
+WV_S32  HIS_VENC_SetResolution(WV_S32  vencChn,WV_U32 width,WV_U32  height ,WV_U32  srcFrmRate ,WV_U32  dstFrmRate,,WV_U32  bitRate );
+#endif 

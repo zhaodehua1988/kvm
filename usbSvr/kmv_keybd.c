@@ -1,0 +1,316 @@
+#include "kmv_usb.h"
+#include "ext_fpga.h"
+
+#define KMV_KEYBD_PATH "/dev/input/"
+
+/*
+static unsigned char srcKey[128]={
+	 0, 0, 0,30,48,46,32,18,33,34,\  //1~10
+	35,23,36,37,38,50,49,24,25,16,\  //11~20
+	19,31,20,22,47,17,45,21,44, 2,\  //21~30
+	 3, 4, 5, 6, 7, 8, 9,10,11,28,\  //31~40
+	 1,14,15,57,12,13,26,27,43, ,\  //41~50
+	39,40,41,51,52,53,58,59,60,61,\  //51~60
+	62,63,64,65,66,67,68,87,88,99,\  //61~70
+	70,119,110,102,104,111,107,109,106,105,\ //71~80
+	108,103,69,98,55,74,78,96,79,80,\  //81~90
+	81,75,76,77,71,72,73,82,83,43, \ //91~100
+	0
+};
+
+
+*/
+//left   29[lCtrl] 42[lShift]  56[lAlt] 125[lWin]
+//right  97[rCtrl] 54[rShift] 100[rAlt] 126[rWin]   
+//84[] 85[] 86[] 89[] 91[] 92[] 94[] 97[] 100[] 101[] 
+
+static unsigned char mapKey[121] = {
+	//0
+	0,\
+	//1~10                                 
+	41,30,31,32,33,34,35,36,37,38,\
+	//11~20
+	39,45,46,42,43,20,26,8,21,23, \
+	//21~30
+	28,24,12,18,19,47,48,40, 0 ,4, \
+	//31~40
+	22,7,9,10,11,13,14,15,51,52, \
+	//41~50
+	53,0,100,29,27,6,25,5,17,16, \
+	//51~60
+	54,55,56, 0 ,84, 0 ,44,57,58,59,\
+	//61~70
+	60,61,62,63,64,65,66,67,83,71, \
+	//71~80
+	95,96,97,86,92,93,94,87,89,90,\
+	//81~90
+	91,98,99,0  ,0  ,0  ,68,69,0  ,90,\
+	//91~100
+	0 ,92,0 ,0 ,71,88,0 ,84,70,0 ,\
+	//101~110
+	0 ,74,82,75,80,79,77,81,78,73,\
+	 //111~120
+	76,0 ,0 ,0 ,0 ,0 ,0 ,0 ,72,0       
+ };
+
+
+/************************************************************
+
+unsigned char KMV_KEYBD_SetBit(unsigned char a,unsigned char pos,int flag);
+
+*************************************************************/
+unsigned char KMV_KEYBD_SetBit(unsigned char a,unsigned char pos,int flag)
+{
+	if((pos > 0) && (pos <= 8))
+	{
+		unsigned char b = 1 << (pos -1);
+		if(flag == 0){
+			
+			a &= ~b;
+			
+		}else if(flag == 1){
+
+			a |= b;
+
+		}
+					
+		
+	}
+	
+	return a;
+	
+}
+
+/************************************************************
+
+int KMV_KEYBD_MapKey(KMV_USB_DEVICE_INFO *pDev);
+
+*************************************************************/
+int KMV_KEYBD_MapKey(KMV_USB_DEVICE_INFO *pDev,struct input_event key)
+{ 
+
+
+	//  126[rWin] 100[rAlt]  54[rShift]  97[rCtrl]  125[lWin] 56[lAlt] 42[lShift] 29[lCtrl]
+	switch(key.code)
+	{
+		case 126: 
+			//key:right win
+			pDev->specialKey = KMV_KEYBD_SetBit(pDev->specialKey,8,key.value);
+		
+			break;
+		case 100:
+			//key:right Alt 
+			pDev->specialKey = KMV_KEYBD_SetBit(pDev->specialKey,7,key.value);
+		
+			break;
+		case 54: 
+			//key:right Shift
+			pDev->specialKey = KMV_KEYBD_SetBit(pDev->specialKey,6,key.value);
+			break;
+		case 97: 
+			//key:right Ctrl
+			pDev->specialKey = KMV_KEYBD_SetBit(pDev->specialKey,5,key.value);
+
+			break;
+		case 125: 
+			//key:left win 
+			pDev->specialKey = KMV_KEYBD_SetBit(pDev->specialKey,4,key.value);
+
+			break;
+		case 56: 
+			//key:left Alt
+			pDev->specialKey = KMV_KEYBD_SetBit(pDev->specialKey,3,key.value);
+
+			break;
+		case 42:
+			//key:left Shift 
+			pDev->specialKey = KMV_KEYBD_SetBit(pDev->specialKey,2,key.value);
+
+			break;
+			//key:left Ctrl
+		case 29: 
+			pDev->specialKey = KMV_KEYBD_SetBit(pDev->specialKey,1,key.value);
+
+			break;			
+		default:
+			//common key
+			if(key.code < 121)
+			{
+				pDev->keyState[key.code] = key.value;
+			}			
+			break;		
+			 			
+	}
+	return 0;
+}
+/************************************************************
+
+int KMV_USB_DEV_PopAllKey(KMV_USB_DEVICE_INFO *pInfo);
+
+*************************************************************/
+int KMV_KEYBD_PopAllKey(KMV_USB_DEVICE_INFO *pDev)
+{
+	unsigned char buf=0;
+	memset(pDev->keyState,0,sizeof(pDev->keyState));
+	pDev->specialKey = 0;
+	//printf("pop key chn[%d]\n",pDev->chn);
+	KMV_KEYBD_SendChl(pDev,&buf,1);
+	return 0;
+	
+}
+/************************************************************
+
+int KMV_KEYBD_SendChl(KMV_USB_DEVICE_INFO *pDev);
+
+*************************************************************/
+int KMV_KEYBD_SendChl(KMV_USB_DEVICE_INFO *pDev,unsigned char *pBuf,int len)
+{
+	KMV_USB_DEV_SetChl(pDev,pBuf,len);
+	//printf("send chn [%d]\n",pDev->chn);
+	if(pDev->chn < 4 && pDev->chn >= 0)
+	{			
+		EXT_FPGA_SendKB(pDev->chn,pBuf,len ); 
+		return 0;		
+	}
+	else if(pDev->chn ==4 )
+	{
+		//send to remote dev
+		//printf("kb send to remote dev\n");
+		KMV_UDP_ClientSend(pBuf,len,3,pDev->devType);
+	}
+
+	//KMV_USB_printf("send chl[%d]: ",pDev->chn);
+
+	return 0;
+}
+
+
+/************************************************************
+
+int KMV_KEYBD_Send(KMV_USB_DEVICE_INFO *pDev);
+
+*************************************************************/
+int KMV_KEYBD_Send(KMV_USB_DEVICE_INFO *pDev)
+{
+
+	if(pDev->ena == 0)
+	{
+		return 0;
+	}
+
+	int i,j=0,bufLen=0;
+	unsigned char sendBuf[20];
+	memset(sendBuf,0,sizeof(sendBuf));	
+	sendBuf[2] = 0;	
+	sendBuf[1] = pDev->specialKey;
+	for(i=0;i<121;i++)
+	{
+		if(pDev->keyState[i] == 1){
+			j++;
+		if(j > 6 )
+			return -1;		
+		sendBuf[2+j] = mapKey[i];
+		}
+	}
+	if(j==0)
+	{
+		sendBuf[0] = 0x83;
+		bufLen = 4;
+	}else{
+		sendBuf[0] = 0x80 | (char)(2+j);	
+		bufLen = 3+j;
+	}
+
+	if((pDev->specialKey == 0) && (j==0))
+	{
+	    sendBuf[0] = 0x0;
+		//KMV_USB_printf("send : 0x00\n");
+		//EXT_FPGA_SendKB(pDev->chn,sendBuf,1 );
+		KMV_KEYBD_SendChl(pDev,sendBuf,1); 
+	}else {
+
+		KMV_KEYBD_SendChl(pDev,sendBuf,bufLen);
+
+#if 0
+		for(i=0;i<bufLen;i++){
+			printf("%02x ",sendBuf[i]);	
+		}
+		printf("\n");
+#endif
+      }
+
+	return 0;
+}
+
+
+/************************************************************
+
+int KMV_KEYBD_Proc(KMV_USB_DEVICE_INFO *pInfo);
+
+*************************************************************/
+int KMV_KEYBD_Proc(KMV_USB_DEVICE_INFO *pInfo){
+
+	int readLen,ret;
+	int keybd_fd;
+
+	struct input_event recv;
+
+	char keybd_path[40];
+	sprintf(keybd_path,"%s%s",KMV_KEYBD_PATH,pInfo->handler);
+	//printf("kebd path [%s]\n",keybd_path);
+	//access file
+	ret = access(keybd_path,F_OK);
+	if(ret == 0){
+		KMV_USB_printf("access ok\n");	
+
+	}else{
+		KMV_USB_printf("access error \n");
+		return -1;
+	}
+	//open file
+	keybd_fd = open(keybd_path,O_RDWR);
+	if(keybd_fd <= 0)
+	{
+		KMV_USB_printf("open keybd dev error[%s]\n",keybd_path);
+		return -1;	
+	}else{
+		KMV_USB_printf("open keybd dev ok\n");
+	}
+	//get keybd value
+	pInfo->plug =1;
+	while(1)
+	{
+		readLen=read(keybd_fd,&recv,sizeof(recv));
+		if( readLen== sizeof(recv))
+		{
+	
+			if(recv.type==EV_KEY)
+			{
+				if(recv.value==0 || recv.value==1)
+				{
+					//KMV_USB_printf("key %d 0x%02x %s\n",recv.code,recv.code,(recv.value)?"Pressed":"Released");
+					KMV_KEYBD_MapKey(pInfo,recv);
+					KMV_KEYBD_Send(pInfo);
+				}
+			}
+				
+		}else if(readLen == -1){
+
+				memset(pInfo->keyState,0,sizeof(pInfo->keyState));
+
+				pInfo->specialKey = 0;
+				KMV_KEYBD_Send(pInfo);
+				break;
+		}
+						
+	}
+
+	close(keybd_fd);
+	//memset(pInfo,0,sizeof(KMV_USB_DEVICE_INFO));
+	memset(pInfo->handler,0,sizeof(pInfo->handler));		
+	pInfo->name = -1;
+	pInfo->plug = 0;
+	return 0;	
+}
+
+

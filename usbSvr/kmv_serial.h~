@@ -1,0 +1,62 @@
+#ifndef _KMV_SERIAL_H_H_
+#define _KMV_SERIAL_H_H_
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <netdb.h>
+#include <pthread.h>
+#include <sys/select.h>
+#include <fcntl.h>
+#include <termios.h>
+
+#define SERIAL_ERR -1
+#define SERIAL_OK  0
+
+#define KMV_V_SERIAL_DEBUG_MODE
+
+#ifdef  KMV_V_SERIAL_DEBUG_MODE
+#define KMV_SERIAL_printf(...) \
+  				 do {\
+  				  printf("\n\rSerial:" __VA_ARGS__);\
+  				  fflush(stdout); \
+  				  } while(0)
+#else 
+  #define KMV_SERIAL_printf(...) 
+#endif
+
+#ifdef  KMV_V_SERIAL_DEBUG_MODE
+#define KMV_SERIAL_error(...) \
+  				 do {\
+				  printf("\r\n<fun:%s line:%d>",__FUNCTION__,__LINE__);\
+  				  printf("Serial err:" __VA_ARGS__);\
+  				  fflush(stdout); \
+  				  } while(0)
+#else 
+  #define KMV_SERIAL_error(...) 
+#endif
+
+typedef struct KMV_SERIAL_CONF_INFO
+{
+	unsigned int open;
+	unsigned int port;
+	unsigned int baudRate;
+	unsigned int checkBit;
+	unsigned int dataBit;
+	unsigned int stopBit;
+
+}KMV_SERIAL_CONF_INFO;
+
+
+int  KMV_SERIAL_CONF_GetInfo(KMV_SERIAL_CONF_INFO **pInfo);
+
+int  KMV_V_SERIAL_Open();
+int  KMV_V_SERIAL_Close();
+int  KMV_SERIAL_CONF_Open();
+int  KMV_SERIAL_CONF_Close();
+#endif

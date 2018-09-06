@@ -1,0 +1,75 @@
+#include "wv_common.h" 
+#include "sys.h" 
+#include "his.h"
+#include "tsk.h" 
+#include "ext.h"
+
+// for usb key svr uart
+#include "kmv_svr.h"
+#include "kmv_usb.h"
+#include "kmv_serial.h"
+/******************************************************************************
+* function    : main()
+* Description :  
+******************************************************************************/
+
+WV_S32  main()
+{
+	WV_S32 ret; 
+	printf("********hello world ********\n"); 
+	SYS_Init(); 
+    HIS_SYS_Init();
+	 //
+	 EXT_AD9984_Init();
+	 EXT_FPGA_Init();
+	 EXT_DVI_Init();
+	 EXT_SI7127_Init();
+	 EXT_VGA_Init();
+	 EXT_3268_Init();
+	 //
+	 TSK_AI_Init();
+	 TSK_AO_Init(); 
+	 TSK_VDEC_Init();
+	 TSK_VENC_Init();
+	 TSK_SRX_Init();
+	 
+	 //
+	// SVR_Open();
+	//KMV_V_SERIAL_Open();
+	//KMV_USB_DEV_Open();
+	//KMV_SERIAL_CONF_Open(); 
+	while(1)
+		{
+		ret = WV_CMD_GetExit();  
+		if(ret == 1)
+			{
+			 break;
+			 }
+		usleep(50000); 
+		}
+	//
+	//KMV_SERIAL_CONF_Close();
+	//KMV_USB_DEV_Close();
+	//KMV_V_SERIAL_Close();
+	//SVR_Close();
+	//	
+    EXT_AD9984_DeInit();
+   	EXT_SI7127_Init();
+   	EXT_DVI_DeInit();
+   	EXT_VGA_Init();	
+   	EXT_3268_Init();
+   	EXT_FPGA_DeInit();
+	//	
+	TSK_SRX_DeInit();	
+	TSK_VENC_DeInit();	
+	TSK_VDEC_DeInit();	
+		
+	TSK_AO_DeInit();	 
+	TSK_AI_DeInit();	
+    HIS_SYS_DeInit(); 		 	
+	SYS_DeInit();
+	printf("********    bye     ********\n");
+	return 0;
+}
+
+

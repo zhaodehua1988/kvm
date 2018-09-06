@@ -1,0 +1,20 @@
+#include"wv_file.h"
+
+
+
+/****************************************************************
+
+WV_S32   WV_FILE_Access(WV_S8 *filename)
+
+****************************************************************/
+WV_S32   WV_FILE_Access(WV_S8 *filename)
+{  
+   WV_S32 ret;
+   ret =access(filename, F_OK); 
+   if (ret != 0 )
+     {
+      WV_ERROR(" %s DOESN'T EXISIT\r\n",filename); 
+       return WV_EFAIL;
+     }    
+   return WV_SOK;
+}

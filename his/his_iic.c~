@@ -1,0 +1,362 @@
+#include "his_iic.h"
+
+
+/* /dev/i2c-X ioctl commands.  The ioctl's parameter is always an
+ * unsigned long, except for:
+ *      - I2C_FUNCS, takes pointer to an unsigned long
+ *      - I2C_RDWR, takes pointer to struct i2c_rdwr_ioctl_data
+ *      - I2C_SMBUS, takes pointer to struct i2c_smbus_ioctl_data
+ */
+#define I2C_RETRIES     0x0701  /* number of times a device address should
+				   be polled when not acknowledging */
+#define I2C_TIMEOUT     0x0702  /* set timeout in units of 10 ms */
+/* NOTE: Slave address is 7 or 10 bits, but 10-bit addresses
+ * are NOT supported! (due to code brokenness)
+ */
+#define I2C_SLAVE       0x0703  /* Use this slave address */
+#define I2C_SLAVE_FORCE 0x0706  /* Use this slave address, even if it
+				   is already in use by a driver! */
+#define I2C_TENBIT      0x0704  /* 0 for 7 bit addrs, != 0 for 10 bit */
+
+#define I2C_FUNCS       0x0705  /* Get the adapter functionality mask */
+
+#define I2C_RDWR        0x0707  /* Combined R/W transfer (one STOP only) */
+
+#define I2C_PEC         0x0708  /* != 0 to use PEC with SMBus */
+#define I2C_SMBUS       0x0720  /* SMBus transfer */
+#define I2C_16BIT_REG   0x0709  /* 16BIT REG WIDTH */
+#define I2C_16BIT_DATA  0x070a  /* 16BIT DATA WIDTH */
+
+
+
+
+
+/****************************************************************************
+
+WV_S32 HIS_IIC_Open  (HIS_IIC_HNDL  *pHndl, WV_U8 busId)
+
+****************************************************************************/
+WV_S32 HIS_IIC_Open  (HIS_IIC_HNDL  *pHndl, WV_U8 busId)
+{
+  if (busId == 0)
+   	{
+		pHndl->fd = open("/dev/i2c-0", O_RDWR); 
+	}		
+  else
+    {
+      return WV_EFAIL;   
+    }
+    
+  return WV_SOK;
+
+}
+
+
+/****************************************************************************
+
+WV_S32 HIS_IIC_Close (HIS_IIC_HNDL  *pHndl);
+
+****************************************************************************/
+WV_S32 HIS_IIC_Close (HIS_IIC_HNDL  *pHndl)
+{
+    return close(pHndl->fd);
+}
+
+/****************************************************************************
+
+WV_S32 HIS_IIC_Read8 (HIS_IIC_HNDL  hndl, WV_U8 devAddr, WV_U8 regAddr, WV_U8 *value, WV_U32 count);
+
+****************************************************************************/
+WV_S32 HIS_IIC_Read8 (HIS_IIC_HNDL  hndl, WV_U8 devAddr, WV_U8 regAddr, WV_U8 *value, WV_U32 count)
+{
+   WV_S32  ret = WV_EFAIL; 
+   WV_S32 i = 0;
+   WV_U8  recvbuf[4];
+   WV_U8  cur_addr;
+   
+   // 
+	memset(recvbuf, 0x0, 4);
+	cur_addr  = regAddr;
+    ret = ioctl(hndl.fd, I2C_SLAVE_FORCE, devAddr);
+
+	if(ret < 0)
+		{
+		WV_ERROR("I2C_SLAVE_FORCE erro\r\n"); 			 
+		return WV_EFAIL;
+		} 
+	ret = ioctl(hndl.fd, I2C_16BIT_REG, 0);
+	if(ret < 0)
+		{ 
+		WV_ERROR("I2C_16BIT_REG erro\r\n");  
+		return WV_EFAIL;
+		}
+
+
+	ret = ioctl(hndl.fd, I2C_16BIT_DATA, 0);
+	if(ret < 0)
+		{ 		
+		WV_ERROR("I2C_16BIT_DATA erro\r\n");   
+		return WV_EFAIL;
+		}
+
+	for (i=0; i < count; i++)
+	{ 	
+	     recvbuf[0] = cur_addr & 0Xff ;
+            // ret = -1;
+            // while(ret <0){
+				 ret = read(hndl.fd,recvbuf, 1);
+					if (ret < 0)
+				 	{
+				 	WV_ERROR("fd[%d]  read  dev %#x  reg  %#x  erro \r\n",hndl.fd,devAddr,recvbuf[0]); 
+				 	  usleep(1000);
+				   return WV_EFAIL;
+				 	}
+               // }
+		value[i] = recvbuf[0]; 
+		cur_addr++; 
+		usleep(1000); 
+	}
+	return WV_SOK;
+}
+
+
+/****************************************************************************
+
+WV_S32 HIS_IIC_Write8 (HIS_IIC_HNDL  hndl, WV_U8 devAddr, WV_U8 regAddr, WV_U8 *value, WV_U32 count);
+
+****************************************************************************/
+WV_S32 HIS_IIC_Write8 (HIS_IIC_HNDL  hndl, WV_U8 devAddr, WV_U8 regAddr, WV_U8 *value, WV_U32 count)
+{
+    WV_S32  ret = WV_EFAIL; 
+	WV_S32  i = 0;
+	WV_U8 buf[4];
+	WV_U8 cur_addr;
+
+	memset(buf, 0x0, 4);
+	cur_addr  = regAddr;
+
+	ret = ioctl(hndl.fd, I2C_SLAVE_FORCE, devAddr);
+
+	if(ret < 0)
+		{ 
+		WV_ERROR("I2C_SLAVE_FORCE erro\r\n"); 
+		return WV_EFAIL;
+		}
+
+	ret = ioctl(hndl.fd, I2C_16BIT_REG, 0);
+
+		if(ret < 0)
+		{ 
+		WV_ERROR("I2C_16BIT_REG erro\r\n"); 
+		return WV_EFAIL;
+		}
+
+
+	ret = ioctl(hndl.fd, I2C_16BIT_DATA, 0);
+
+	if(ret < 0)
+		{
+		WV_ERROR("I2C_16BIT_DATA erro\r\n"); 
+		return WV_EFAIL;
+		}
+
+	for (i=0; i < count; i++)
+		{
+
+		buf[0] = cur_addr & 0Xff ;
+		buf[1] = value[i] & 0Xff ;
+              //  ret = -1;
+             //  while(ret <0) {
+		ret = write(hndl.fd,buf, 2);
+		 if (ret < 0)
+			 { 
+			 WV_ERROR("fd[%d]  write  dev %#x  reg  %#x  = %#x erro \r\n",hndl.fd,devAddr,buf[0],buf[1]); 
+			 usleep(1000);
+			 return  -1;
+                         
+			 }
+          //    }  
+		cur_addr++;
+       usleep(3000);
+		}
+
+
+	return WV_SOK;
+		 
+}
+
+
+
+/****************************************************************************
+
+WV_S32 HIS_IIC_CmdGet(WV_S32 argc, WV_S8 **argv,WV_S8 *prfBuff)
+
+****************************************************************************/
+WV_S32 HIS_IIC_CmdGet(WV_S32 argc, WV_S8 **argv, WV_S8 * prfBuff)
+{
+	WV_U32  busId,regAddr,dataLen;
+	WV_U32   devAddr;
+	WV_U8    buf[255];
+	WV_S32   ret,i;
+	HIS_IIC_HNDL  hndl;  
+
+	if(argc<2) 
+		{
+		prfBuff += sprintf(prfBuff,"get iic <BusId> <DevAddr> <RegAddr> <DataNum> \r\n");
+		return 0;
+		}
+
+	ret =  WV_STR_S2v(argv[0],&busId);
+	if(ret != WV_SOK)
+		{
+		prfBuff += sprintf(prfBuff,"input erro!\r\n"); 
+		}
+
+	ret =  WV_STR_S2v(argv[1],&devAddr);
+	if(ret != WV_SOK)
+		{
+		prfBuff += sprintf(prfBuff,"input erro!\r\n"); 
+		}
+
+	regAddr = 0;
+	if(argc>2)
+		{
+		ret =  WV_STR_S2v(argv[2],&regAddr);
+		if(ret != WV_SOK)
+			{
+			prfBuff += sprintf(prfBuff,"input erro!\r\n"); 
+			}
+		}
+
+	dataLen = 1;
+	if(argc>3)
+		{
+		ret =  WV_STR_S2v(argv[3],&dataLen);
+		if(ret != WV_SOK)
+			{
+			prfBuff += sprintf(prfBuff,"input erro!\r\n"); 
+			}
+		}
+
+
+	ret = HIS_IIC_Open  (&hndl,busId);
+	if(ret != WV_SOK)
+		{
+		prfBuff += sprintf(prfBuff," HIS_IIC_Open erro\r\n"); 
+		}
+
+	ret =  HIS_IIC_Read8 (hndl,devAddr, regAddr, buf,dataLen);
+	if(ret != WV_SOK)
+		{
+		prfBuff += sprintf(prfBuff,"HIS_IIC_Read8 erro\r\n"); 
+		}
+
+	prfBuff += sprintf(prfBuff,"get bus[%d] DEV[%d]:\r\n",busId,devAddr); 
+
+	for(i=0;i<dataLen ;i++)
+		{
+		prfBuff += sprintf(prfBuff,"%02x =%02x\r\n",regAddr+i,buf[i]); 
+		}
+    ret = HIS_IIC_Close (&hndl);
+     if(ret != WV_SOK)
+		{
+		 prfBuff += sprintf(prfBuff," HIS_IIC_Close erro\r\n"); 
+		}
+	return WV_SOK;
+ 	
+}
+
+
+/****************************************************************************
+
+WV_S32 HIS_IIC_CmdSet(WV_S32 argc, WV_S8 **argv,WV_S8 *prfBuff)
+
+****************************************************************************/
+WV_S32 HIS_IIC_CmdSet(WV_S32 argc, WV_S8 **argv, WV_S8 * prfBuff)
+{
+	WV_U32  busId,regAddr,data;
+	WV_U32   devAddr;
+	WV_U8   buf[255];
+	WV_S32  ret;
+	HIS_IIC_HNDL  hndl;  
+
+	if(argc<4) 
+		{
+		prfBuff += sprintf(prfBuff,"set iic <BusId> <DevAddr> <RegAddr> <Data>\r\n");
+		return 0;
+		}
+	ret =  WV_STR_S2v(argv[0],&busId);
+	if(ret != WV_SOK)
+		{
+		prfBuff += sprintf(prfBuff,"input erro!\r\n"); 
+		}
+	ret =  WV_STR_S2v(argv[1],&devAddr);
+	if(ret != WV_SOK)
+		{
+		prfBuff += sprintf(prfBuff,"input erro!\r\n"); 
+		}
+
+	ret =  WV_STR_S2v(argv[2],&regAddr);
+	if(ret != WV_SOK)
+		{
+		prfBuff += sprintf(prfBuff,"input erro!\r\n"); 
+		}
+
+	ret =  WV_STR_S2v(argv[3],&data);
+	if(ret != WV_SOK)
+		{
+		prfBuff += sprintf(prfBuff,"input erro!\r\n"); 
+		} 
+		
+		
+	buf[0] = (WV_U8)data;
+
+	ret = HIS_IIC_Open  (&hndl,busId);
+		if(ret != WV_SOK)
+		{
+		prfBuff += sprintf(prfBuff," HIS_IIC_Open erro\r\n"); 
+		}
+
+	ret =  HIS_IIC_Write8 (hndl,(WV_U8)devAddr, (WV_U8)regAddr, buf,1);
+	if(ret != WV_SOK)
+		{
+		prfBuff += sprintf(prfBuff,"HIS_IIC_Write8 erro\r\n"); 
+		}
+
+	prfBuff += sprintf(prfBuff,"set bus[%d] DEV[%d] = %d:\r\n",busId,devAddr,buf[0]); 
+	ret = HIS_IIC_Close (&hndl);
+	  	if(ret != WV_SOK)
+		{
+		 prfBuff += sprintf(prfBuff," HIS_IIC_Close erro\r\n"); 
+		}
+	return WV_SOK;
+ 	
+}
+
+
+/****************************************************************************
+
+WV_S32 HIS_IIC_Init()
+
+****************************************************************************/
+WV_S32 HIS_IIC_Init()
+{	  
+    WV_CMD_Register("get","iic","iic bus read",HIS_IIC_CmdGet); 
+    WV_CMD_Register("set","iic","iic bus write",HIS_IIC_CmdSet);
+    return WV_SOK;	
+}
+
+/****************************************************************************
+
+WV_S32 HIS_IIC_DeInit()
+
+****************************************************************************/
+WV_S32 HIS_IIC_DeInit()
+{
+     
+    return WV_SOK;  	
+}
+
+
+
+

@@ -1,0 +1,6 @@
+#ifndef _WV_TASK_VDEC_H__
+#define _WV_TASK_VDEC_H__
+#include "sys.h"  
+WV_S32  TSK_VDEC_Init();
+WV_S32  TSK_VDEC_DeInit(); 
+#endif

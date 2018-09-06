@@ -1,0 +1,15 @@
+#!/bin/sh
+# This file auto create by makefile
+
+echo "Compile file system used arm-hisiv200-linux-"
+echo "2017-02-07 13时45分31秒 (root@wjk-VirtualBox)"
+mkdir -p /lib/modules/`uname -r`
+
+if [ -e /opt/commom/appstart.sh ]; then
+	cd /opt/commom
+	./appstart.sh
+else
+  echo "appstart.sh not exist."
+fi
+
+

@@ -1,0 +1,10 @@
+#ifndef _WV_HIS_AIO_H__
+#define _WV_HIS_AIO_H__
+#include "wv_common.h"  
+WV_S32  HIS_AI_Init(WV_S32  devAi);
+WV_S32  HIS_AI_DeInit(WV_S32  devAi);  
+WV_S32  HIS_AO_Init(WV_S32  devAo);
+WV_S32  HIS_AO_DeInit(WV_S32  devAo);
+
+WV_S32  HIS_AI_GetFrame(WV_S32  devAi,WV_U8 *pBuf,WV_U32 * pLen ,WV_U64 *pPts);  
+#endif 

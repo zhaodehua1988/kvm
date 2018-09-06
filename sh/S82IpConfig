@@ -1,0 +1,7 @@
+#!/bin/sh
+ifconfig eth0 down
+ifconfig eth0 hw ether 00:01:37:98:00:01
+ifconfig eth0 up
+ifconfig eth0 192.168.15.98 netmask 255.255.255.0
+route add default gw 192.168.15.1
+

@@ -1,0 +1,346 @@
+#include"tsk_ai.h" 
+#include"his_aio.h"
+#include"stream.h"
+
+#define TSK_AI_BUF_LEN       2*1024
+
+typedef struct TSK_AI_DEV_E 
+{
+// 
+ WV_THR_HNDL_T 		thrHndl; 
+ WV_U32      		open;
+ WV_U32      		close;  
+ WV_U8       		*pBuf;
+ WV_ETH_UDP_TX_E  	txSock; 
+ //  config for video
+  WV_U8       		aPid;
+  WV_S32      		aiDev;
+  // statute
+  WV_U32      		aiLen;
+  WV_U64      		aiPts;
+  WV_U32      		aiCnt; 
+   WV_U32      		pkgCnt;
+  WV_U32      		erroCnt;
+  
+}TSK_AI_DEV_E;
+
+static  TSK_AI_DEV_E  gAiDev[2];
+
+/*******************************************************************
+
+WV_S32 TSK_AI_RegisterConf(WV_S32 chn);
+
+*******************************************************************/
+WV_S32 TSK_AI_RegisterConf(WV_S32 chn)
+{
+	WV_S8  name[WV_CONF_NAME_MAX_LEN],value[WV_CONF_VALUE_MAX_LEN]; 
+	
+	sprintf(name,"Ai_%d_conf",chn); 
+	SYS_ENV_Register(0,name,NULL,NULL);
+	//
+	sprintf(name,"Ai_%d_aiDev",chn); 
+	sprintf(value, "%d",chn);
+    SYS_ENV_Register(1 ,name,value,"ai Dev num"); 
+     //
+   	sprintf(name,"Ai_%d_ip",chn); 
+	sprintf(value, "223.100.100.01"); 
+    SYS_ENV_Register(1 ,name,value,"ai send ip addr"); 
+     //
+   	sprintf(name,"Ai_%d_port",chn); 
+	sprintf(value, "%d",7001); 
+    SYS_ENV_Register(1 ,name,value,"Ai send ip port");     
+    //
+   	sprintf(name,"Ai_%d_pid",chn); 
+	sprintf(value, "%d",12+chn); 
+    SYS_ENV_Register(1 ,name,value,"video pid"); 
+   
+    return WV_SOK;  
+       
+}
+
+
+
+
+
+/*******************************************************************
+
+WV_S32 TSK_AI_GetConf(WV_S32 chn,TSK_AI_DEV_E *pDev);
+
+*******************************************************************/
+WV_S32 TSK_AI_GetConf(WV_S32 chn,TSK_AI_DEV_E *pDev)
+{
+	WV_U32 data,*pData; 
+	pData = & data;
+	WV_S8  name[WV_CONF_NAME_MAX_LEN],value[WV_CONF_VALUE_MAX_LEN]; 
+
+	//
+	sprintf(name,"Ai_%d_aiDev",chn); 
+	SYS_ENV_GetU32(name,pData);
+	pDev->aiDev = data;  
+ 
+	// ip
+    sprintf(name,"Ai_%d_ip",chn); 
+	SYS_ENV_Get(name,value);
+	pDev-> txSock.addrTx.sin_addr.s_addr = inet_addr(value); 
+	bzero(&(pDev-> txSock.addrTx.sin_zero),8);
+	//port
+	sprintf(name,"Ai_%d_port",chn); 
+	SYS_ENV_GetU32(name,pData); 
+	pDev-> txSock.addrTx.sin_port = htons(data);
+	//vPid
+	sprintf(name,"Ai_%d_pid",chn); 
+	SYS_ENV_GetU32(name,pData);
+	pDev->aPid = data; 
+	//local IP IP_Ip
+	sprintf(name,"IP_Ip"); 
+	SYS_ENV_Get(name,value);
+	pDev-> txSock.addrLocal.sin_addr.s_addr = inet_addr(value); 
+	bzero(&(pDev-> txSock.addrLocal.sin_zero),8); 
+	
+	return  WV_SOK;
+}
+
+
+
+/*******************************************************************
+
+WV_S32 TSK_AI_SaveConf(WV_S32 chn,TSK_AI_DEV_E *pDev);
+
+*******************************************************************/
+WV_S32 TSK_AI_SaveConf(WV_S32 chn,TSK_AI_DEV_E *pDev)
+{
+	WV_U32 data;//*pData; 
+	//pData = & data;
+	WV_S8  name[WV_CONF_NAME_MAX_LEN];//,value[WV_CONF_VALUE_MAX_LEN]; 
+
+	// aiDev
+	 sprintf(name,"Ai_%d_aiDev",chn); 
+	 data = pDev->aiDev;  
+	 SYS_ENV_SetU32(name,data);    
+ 
+	// ip
+     sprintf(name,"Ai_%d_ip",chn); 
+	 WV_S8 * pIp  = inet_ntoa(pDev-> txSock.addrTx.sin_addr);  
+	 SYS_ENV_Set(name,pIp);
+	//port
+	sprintf(name,"Ai_%d_port",chn); 
+	data =ntohs(pDev-> txSock.addrTx.sin_port);  
+	SYS_ENV_SetU32(name,data);
+	//vPid
+	sprintf(name,"Ai_%d_pid",chn); 
+    data = pDev->aPid;  
+	SYS_ENV_SetU32(name,data);   
+	
+	return  WV_SOK;
+}
+
+
+
+/**********************************************************************************
+
+WV_S32  HIS_AI_DevOpen(TSK_AI_DEV_E * pdev );
+
+**********************************************************************************/
+
+WV_S32  HIS_AI_DevOpen(TSK_AI_DEV_E *pDev )
+{
+   
+   	WV_CHECK_RET(   HIS_AI_Init(pDev->aiDev) ); 
+ 	WV_CHECK_RET(   WV_UDPTX_Creat( &(pDev->txSock)) );
+ 	pDev->pBuf  =  (WV_U8 *)malloc( TSK_AI_BUF_LEN );
+ 	return WV_SOK;	
+}
+
+
+/**********************************************************************************
+
+WV_S32  HIS_AI_DevClose(TSK_AI_DEV_E * pdev );
+
+**********************************************************************************/
+
+WV_S32  HIS_AI_DevClose(TSK_AI_DEV_E *pDev )
+{
+   
+   	WV_CHECK_RET(   HIS_AO_DeInit(pDev->aiDev) ); 
+ 	WV_CHECK_RET(   WV_UDPTX_Destroy( &(pDev->txSock)) );
+ 	free(pDev->pBuf);
+ 	return WV_SOK;	
+}
+
+
+/******************************************************************************
+
+void *TSK_AI_Proc(Void * prm);
+******************************************************************************/
+void * TSK_AI_Proc ( void * prm)
+{
+ TSK_AI_DEV_E  * pDev; 
+ WV_U8  * pTemp;
+ WV_S32 ret =0; 
+ pDev = (TSK_AI_DEV_E  *) prm; 
+ 
+ HIS_AI_DevOpen(pDev);
+ pDev-> open  = 1;
+ pDev-> close  = 0; 
+ while(pDev -> open == 1)
+    { 
+     
+     // get sterrame
+     pTemp  =  pDev->pBuf + 16;
+     ret = HIS_AI_GetFrame(pDev->aiDev,pTemp,&pDev-> aiLen ,& pDev->aiPts); 
+     if(ret != WV_SOK)
+     {
+          usleep(10000);
+          continue; 
+      }
+       pTemp  =  pDev->pBuf;
+       
+     // *(WV_U16*)(pTemp + 0) = pDev->viWidth;  //width
+     // *(WV_U16*)(pTemp + 2) = pDev->viHeight; //height;
+      *(WV_U64*)(pTemp + 8) = pDev->aiPts;    // pts
+      
+     ret = STRM_SendEs(&pDev->txSock,pDev->pBuf,pDev->aiLen,pDev->aPid,&pDev->pkgCnt);      
+     pDev->aiCnt ++;
+      
+    } 
+ HIS_AI_DevClose(pDev);
+ pDev-> open  = 0;
+ pDev-> close = 1;
+return NULL;  
+} 
+
+
+ 
+ 
+  
+/****************************************************************************
+
+WV_S32 TSK_AI_SetSendIp(WV_S32 chn, WV_S8 * ipAddr,WV_U32 port)
+
+****************************************************************************/
+
+WV_S32 TSK_AI_SetSendIp(WV_S32 chn, WV_S8 * ipAddr,WV_U32 port)
+{
+ 
+	gAiDev[chn].txSock.addrTx.sin_addr.s_addr = inet_addr(ipAddr); 
+	bzero(&(gAiDev[chn].txSock.addrTx.sin_zero),8);	 
+	gAiDev[chn].txSock.addrTx.sin_port = htons(port);
+	TSK_AI_SaveConf(chn,&gAiDev[chn]); 
+	
+ return WV_SOK;
+}
+/****************************************************************************
+
+WV_S32 TSK_AI_CMDStat(WV_S32 argc, WV_S8 **argv,WV_S8 *prfBuff)
+
+****************************************************************************/
+WV_S32 TSK_AI_CMDStat(WV_S32 argc, WV_S8 **argv, WV_S8 * prfBuff)
+{
+
+   WV_U32 chn;
+   if( argc <1  )
+	{ 
+	    prfBuff += sprintf(prfBuff,"ai  stat  <chn>  // get ai chn stat\r\n"); 
+		return WV_SOK;  
+    } 
+    WV_STR_S2v(argv[0],&chn);
+    
+    if(chn > 1)
+    {
+     prfBuff += sprintf(prfBuff,"input  chn  erro! : %d \r\n",chn);  
+     }
+    
+	prfBuff += sprintf(prfBuff,"venc chn : %d \r\n",chn); 
+
+	prfBuff += sprintf(prfBuff,"aPid     	: %d \r\n",gAiDev[chn].aPid);
+	prfBuff += sprintf(prfBuff,"aiDev     	: %d \r\n",gAiDev[chn].aiDev);  
+	prfBuff += sprintf(prfBuff,"aiLen  		: %d \r\n",gAiDev[chn].aiLen);
+	prfBuff += sprintf(prfBuff,"aiPts  		: %lld \r\n",gAiDev[chn].aiPts);
+	prfBuff += sprintf(prfBuff,"aiCnt  		: %d \r\n",gAiDev[chn].aiCnt);
+	prfBuff += sprintf(prfBuff,"pkgCnt  	: %d \r\n",gAiDev[chn].pkgCnt);
+	prfBuff += sprintf(prfBuff,"erroCnt  	: %d \r\n",gAiDev[chn].erroCnt); 
+  
+  return WV_SOK;
+}
+  
+ 
+/****************************************************************************
+
+WV_S32 TSK_AI_CMDSet(WV_S32 argc, WV_S8 **argv,WV_S8 *prfBuff)
+
+****************************************************************************/
+WV_S32 TSK_AI_CMDSet(WV_S32 argc, WV_S8 **argv, WV_S8 * prfBuff)
+{
+   WV_U32 chn;
+   WV_U32 data; 
+   if( argc < 2  )
+	{ 
+	    prfBuff += sprintf(prfBuff,"ai  set  <cmd>  cmd : ip \r\n"); 
+		return WV_SOK;  
+    }
+  //      set ip 
+     
+    if(strcmp(argv[0],"ip") ==0)
+	{
+		if(argc < 4)
+		{ 
+			prfBuff += sprintf(prfBuff,"set ip  chn  ipaddr  port\r\n");  
+			return WV_SOK; 
+		}
+		WV_STR_S2v(argv[1],&chn); 
+		WV_STR_S2v(argv[3],&data); 
+		WV_ASSERT_RET ( TSK_AI_SetSendIp(chn,argv[2],data)); 
+		return WV_SOK;  
+	} 
+    
+	prfBuff += sprintf(prfBuff,"no the cmd!!!!!!\r\n"); 
+	        
+ return WV_SOK;
+}
+/*****************************************************************************************************************
+
+WV_S32  TSK_AI_Init();
+
+*****************************************************************************************************************/
+WV_S32  TSK_AI_Init()
+{ 
+   WV_S32 i;
+   
+   WV_CMD_Register("ai","sata","get ai info",TSK_AI_CMDStat);
+   WV_CMD_Register("ai","set","set ai ",TSK_AI_CMDSet); 
+   
+   for( i=0;i<2;i++)
+   {
+   
+    TSK_AI_RegisterConf(i);
+    TSK_AI_GetConf(i, &gAiDev[i]); 
+    WV_THR_Create(&(gAiDev[i].thrHndl), TSK_AI_Proc , WV_THR_PRI_DEFAULT, WV_THR_STACK_SIZE_DEFAULT, &gAiDev[i]);
+   } 
+   return WV_SOK;
+}
+
+
+
+/*****************************************************************************************************************
+
+WV_S32  TSK_AI_DeInit();
+
+*****************************************************************************************************************/
+WV_S32  TSK_AI_DeInit()
+{ 
+   WV_S32 i;
+	for( i=0;i<2;i++)
+	{
+
+		if(gAiDev[i].open == 1)
+			{
+			gAiDev[i].open = 0;
+			while(gAiDev[i].close == 1) ;
+			WV_CHECK_RET( WV_THR_Destroy(&(gAiDev[i].thrHndl))   );	
+			} 
+
+		     
+	} 
+   return WV_SOK;
+}
+ 

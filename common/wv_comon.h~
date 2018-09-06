@@ -1,0 +1,19 @@
+#ifndef _WV_COMMOM_H_
+#define _WV_COMMOM_H_
+
+#include"wv_type.h"
+
+
+
+#define WV_CHECK_RET(func,name)\
+    do{\
+        WV_S32 ret;\
+        ret = express;\
+        if (WV_SOK != ret)\
+        {\
+            printf("\033[0;31m%s failed at %s: LINE: %d with %#x!\033[0;39m\n", name, __FUNCTION__, __LINE__, Ret);\
+            return ret;\
+        }\
+    }while(0)
+
+#endif /* _COMMOM_COMMOM_H_*/

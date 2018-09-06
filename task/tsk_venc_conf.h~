@@ -1,0 +1,7 @@
+#ifndef  _TSK_VENC_CONF_H_H_
+#define  _TSK_VENC_CONF_H_H_ 
+#include "wv_common.h" 
+
+WV_S32  WV_S32 TSK_VENC_RegisterConf(WV_S32 chn);
+WV_S32  WV_S32 TSK_VENC_RegisterConf(WV_S32 chn);
+#endif

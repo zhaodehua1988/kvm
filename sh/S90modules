@@ -1,0 +1,12 @@
+#!/bin/sh
+
+TELNETD=$(type -p telnetd)
+if [ -f "${TELNETD}" ]; then
+    ${TELNETD}&
+else
+    echo "Not find telnetd"
+fi
+
+cd /kmod
+./load
+cd -

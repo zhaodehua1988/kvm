@@ -1,0 +1,450 @@
+#include "his_ssp.h"
+#include "hi_spi.h"
+ #include "hi_comm_sys.h"
+#define    HIS_SSP_BUFLEN_MAX    2048 
+
+/****************************************************************************
+
+WV_S32  HIS_SSP_Open(HIS_SSP_HNDL *pHndl,WV_U8 csn);
+
+****************************************************************************/
+WV_S32  HIS_SSP_Open(HIS_SSP_HNDL *pHndl,WV_U8 csn,WV_U8 mode)
+{
+
+   WV_S8  file_name[30];
+   WV_U32  clkMode;
+   WV_S32 ret;
+  
+   sprintf(file_name, "/dev/spidev0.%u",csn);
+  // WV_U32 ctrData;
+  // WV_CHECK_FAIL( HI_MPI_SYS_GetReg(0x120d0000,&ctrData) ); 
+  //  WV_printf("SSP get ctr reg =%#X\r\n",ctrData);
+   
+   
+   pHndl->fd = open(file_name, 0);
+	if ( pHndl->fd < 0) {
+	     pHndl->fd  = -1;
+	     WV_ERROR("open %d fail!\r\n",csn); 
+		return WV_EFAIL;
+	}
+         clkMode = SPI_MODE_0 ;  
+        if( mode == 1) 	clkMode = SPI_MODE_1 ;//| SPI_LSB_FIRST;
+        if( mode == 2) 	clkMode = SPI_MODE_2 ;//| SPI_LSB_FIRST;
+	if( mode == 3) 	clkMode = SPI_MODE_3 ;//| SPI_LSB_FIRST;
+
+	ret = ioctl( pHndl->fd, SPI_IOC_WR_MODE, &clkMode);
+	if (ret != WV_SOK) 
+	    {
+		 WV_ERROR("set spi  %d mode fail!\r\n",csn);
+		 close( pHndl->fd);
+		 pHndl->fd  = -1;
+		return WV_EFAIL; 
+	    } 
+   // WV_CHECK_FAIL( HI_MPI_SYS_GetReg(0x120d0000,&ctrData) ); 
+   // WV_printf("SSP get ctr reg =%#X\r\n",ctrData);
+
+  return WV_SOK;
+}
+
+
+
+/****************************************************************************
+
+WV_S32  HIS_SSP_Close(HIS_SSP_HNDL *pHndl);
+
+****************************************************************************/
+WV_S32  HIS_SSP_Close(HIS_SSP_HNDL *pHndl)
+{
+	  close( pHndl->fd);
+	  pHndl->fd  = -1;
+	  return WV_SOK; 
+}
+
+/****************************************************************************
+
+WV_S32  HIS_SSP_Write(HIS_SSP_HNDL hndl,WV_U8 *addrBuf,WV_S32 addrLen,WV_U8 *dataBuf,WV_S32 dataLen);
+
+****************************************************************************/
+WV_S32  HIS_SSP_Write(HIS_SSP_HNDL hndl,WV_U8 *addrBuf,WV_S32 addrLen,WV_U8 *dataBuf,WV_S32 dataLen)
+{
+	WV_S32 ret;
+	struct spi_ioc_transfer mesg[1]; 
+	
+	WV_U8   buf[HIS_SSP_BUFLEN_MAX];
+	
+	if(addrLen +dataLen > HIS_SSP_BUFLEN_MAX) 
+	{
+	    WV_ERROR("Send data is too long ! = %d[%d]\r\n",addrLen +dataLen ,HIS_SSP_BUFLEN_MAX);
+	}
+	 
+	memset(mesg, 0, sizeof mesg);
+	
+	mesg[0].tx_buf = (__u32)buf;
+	mesg[0].rx_buf = (__u32)buf;
+	mesg[0].len = addrLen + dataLen;
+	mesg[0].speed_hz = 2000000;//2M
+	mesg[0].bits_per_word = 8;
+	mesg[0].cs_change = 1;
+	
+	//
+	memcpy(buf,addrBuf,addrLen);	
+	memcpy(buf+addrLen,dataBuf,dataLen);
+	/*WV_printf("HIS_SSP_Write:");
+         WV_S32 i;
+        for(i=0;i<addrLen + dataLen;i++)
+         {
+	    WV_printf(" %#x",buf[i]);
+         }
+         WV_printf("\r\n"); */
+  // WV_U32 ctrData;
+  //  WV_CHECK_FAIL ( HI_MPI_SYS_SetReg(0x120d0000,0x87) ); 
+   //WV_CHECK_FAIL( HI_MPI_SYS_GetReg(0x120d0000,&ctrData) ); 
+   // WV_printf("SSP get ctr reg =%#X\r\n",ctrData);
+   
+      ret = ioctl(hndl.fd, SPI_IOC_MESSAGE(1), mesg);
+		if (ret  != mesg[0].len) {  
+			 WV_ERROR("SPI_IOC_MESSAGE error len%d [%d]\r\n",ret ,mesg[0].len);
+			return WV_EFAIL; 
+		}
+	  
+   // WV_CHECK_FAIL( HI_MPI_SYS_GetReg(0x120d0000,&ctrData) ); 
+   // WV_printf("SSP get ctr reg =%#X\r\n",ctrData);
+	return WV_SOK;	
+}
+
+
+/****************************************************************************
+
+WV_S32  HIS_SSP_Read(HIS_SSP_HNDL hndl,WV_U8 *addrBuf,WV_S32 addrLen,WV_U8 *dataBuf,WV_S32 dataLen);
+
+****************************************************************************/
+WV_S32  HIS_SSP_Read(HIS_SSP_HNDL hndl,WV_U8 *addrBuf,WV_S32 addrLen,WV_U8 *dataBuf,WV_S32 dataLen)
+{
+	WV_S32 ret;
+	struct spi_ioc_transfer mesg[1]; 
+	
+	WV_U8 buf[HIS_SSP_BUFLEN_MAX];
+	
+	if(addrLen +dataLen > HIS_SSP_BUFLEN_MAX) 
+	{
+	    WV_ERROR("Send data is too long ! = %d[%d]\r\n",addrLen +dataLen ,HIS_SSP_BUFLEN_MAX);
+	}
+	 
+	memset(mesg, 0, sizeof mesg);
+	
+	mesg[0].tx_buf = (__u32)buf;
+	mesg[0].rx_buf = (__u32)buf;
+	mesg[0].len = addrLen + dataLen;
+	mesg[0].speed_hz = 2000000;
+	mesg[0].bits_per_word = 8;
+	mesg[0].cs_change = 1;
+	
+	//
+	memcpy(buf,addrBuf,addrLen);	
+	/*WV_printf("HIS_SSP_Read:");
+         WV_S32 i;
+        for(i=0;i<addrLen;i++)
+         {
+	    WV_printf(" %#x[%#x]",buf[i],addrBuf[i]);
+         }
+         WV_printf("\r\n");*/
+    ret = ioctl(hndl.fd, SPI_IOC_MESSAGE(1), mesg);
+		if (ret  != mesg[0].len) {  
+			 WV_ERROR("SPI_IOC_MESSAGE error len%d [%d]\r\n",ret ,mesg[0].len);
+			return WV_EFAIL; 
+		}
+    	
+   memcpy(dataBuf,buf+addrLen,dataLen);
+   return WV_SOK;	
+}
+
+
+
+
+/****************************************************************************
+
+WV_S32 HIS_SSP_CmdGet(WV_S32 argc, WV_S8 **argv,WV_S8 *prfBuff)
+
+****************************************************************************/
+WV_S32 HIS_SSP_CmdGet(WV_S32 argc, WV_S8 **argv, WV_S8 * prfBuff)
+{
+	WV_U32  csn,regAddr,dataLen,addrWidth,dataWidth; 
+	WV_U8    txBuf[255],rxBuf[255];
+	WV_S32   ret,i;
+	HIS_SSP_HNDL  hndl;  
+
+	if(argc<2) 
+		{
+		prfBuff += sprintf(prfBuff,"get SSP <csN><RegAddr> <DataNum><RegWidth><DataWidth> \r\n");
+		return 0;
+		}
+
+	ret =  WV_STR_S2v(argv[0],&csn);
+	if(ret != WV_SOK)
+		{
+		prfBuff += sprintf(prfBuff,"input erro!\r\n"); 
+		}
+	regAddr = 0;
+	ret =  WV_STR_S2v(argv[1],&regAddr);
+	if(ret != WV_SOK)
+		{
+		prfBuff += sprintf(prfBuff,"input erro!\r\n"); 
+		}
+
+	dataLen = 1;
+	if(argc>2)
+		{
+		ret =  WV_STR_S2v(argv[2],&dataLen);
+		if(ret != WV_SOK)
+			{
+			prfBuff += sprintf(prfBuff,"input erro!\r\n"); 
+			}
+		}
+
+   addrWidth  = 2;
+	if(argc>3)
+		{
+		ret =  WV_STR_S2v(argv[3],&dataWidth);
+		if(ret != WV_SOK)
+			{
+			prfBuff += sprintf(prfBuff,"input erro!\r\n"); 
+			}
+		}
+
+   dataWidth  = 2;
+	if(argc>4)
+		{
+		ret =  WV_STR_S2v(argv[4],&addrWidth);
+		if(ret != WV_SOK)
+			{
+			prfBuff += sprintf(prfBuff,"input erro!\r\n"); 
+			}
+		}
+
+
+	ret = HIS_SSP_Open  (&hndl,csn,3);
+	if(ret != WV_SOK)
+		{
+		prfBuff += sprintf(prfBuff," HIS_SSP_Open erro\r\n"); 
+		}
+
+     if(addrWidth == 1)
+     {
+     txBuf[0] = regAddr & 0xff; 
+     }
+    if(addrWidth == 2)
+     {
+      txBuf[1] = regAddr & 0xff; 
+      txBuf[0] = (regAddr>> 8) & 0xff;
+     }
+     if(addrWidth == 4)
+     {
+     
+      txBuf[3] = (regAddr) & 0xff; 
+      txBuf[2] = (regAddr>> 8) & 0xff;   
+      txBuf[1] = (regAddr>> 16) & 0xff; 
+      txBuf[0] = (regAddr>> 24) & 0xff;
+     }
+
+
+	ret =   HIS_SSP_Read(hndl,txBuf,addrWidth,rxBuf,dataWidth*dataLen);
+	if(ret != WV_SOK)
+		{
+		prfBuff += sprintf(prfBuff,"HIS_SSP_read erro\r\n"); 
+		}
+
+	prfBuff += sprintf(prfBuff,"get SSP Csn[%d]:\r\n",csn); 
+
+	
+	for(i=0;i<dataLen ;i++)
+		{
+			 if(dataWidth == 1)
+				 { 
+				  prfBuff +=  sprintf(prfBuff,"%04x =%04x\r\n",regAddr+i,*(rxBuf+i)); 
+				 }
+			 
+			  if(dataWidth == 2)
+				 { 
+				   prfBuff += sprintf(prfBuff,"%04x =%04x\r\n",regAddr+i,*(WV_U16*)(rxBuf+i*2)); 
+				 }
+			   if(dataWidth == 4)
+				 { 
+				   prfBuff += sprintf(prfBuff,"%04x =%04x\r\n",regAddr+i,*(WV_U32*)(rxBuf+i*4)); 
+				 }
+		}
+    ret = HIS_SSP_Close (&hndl);
+     if(ret != WV_SOK)
+		{
+		 prfBuff += sprintf(prfBuff," HIS_SSP_Close erro\r\n"); 
+		}
+	return WV_SOK;
+ 	
+}
+
+
+/****************************************************************************
+
+WV_S32 HIS_SSP_CmdSet(WV_S32 argc, WV_S8 **argv,WV_S8 *prfBuff)
+
+****************************************************************************/
+WV_S32 HIS_SSP_CmdSet(WV_S32 argc, WV_S8 **argv, WV_S8 * prfBuff)
+{
+	WV_U32  csn,regAddr,addrWidth,dataWidth,data; 
+	WV_U8    txBuf[255],rxBuf[255];
+	WV_S32   ret;
+	HIS_SSP_HNDL  hndl;  
+
+	if(argc<3) 
+		{
+		prfBuff += sprintf(prfBuff,"get SSP <csN><RegAddr> <Data><RegWidth><DataWidth> \r\n");
+		return 0;
+		}
+
+	ret =  WV_STR_S2v(argv[0],&csn);
+	if(ret != WV_SOK)
+		{
+		prfBuff += sprintf(prfBuff,"input erro!\r\n"); 
+		}
+	regAddr = 0;
+	ret =  WV_STR_S2v(argv[1],&regAddr);
+	if(ret != WV_SOK)
+		{
+		 prfBuff += sprintf(prfBuff,"input erro!\r\n"); 
+		}
+ 	ret =  WV_STR_S2v(argv[2],&data);
+		if(ret != WV_SOK)
+			{
+			prfBuff += sprintf(prfBuff,"input erro!\r\n"); 
+			}
+	 
+
+   addrWidth  = 2;
+	if(argc>3)
+		{
+		ret =  WV_STR_S2v(argv[3],&addrWidth);
+		if(ret != WV_SOK)
+			{
+			prfBuff += sprintf(prfBuff,"input erro!\r\n"); 
+			}
+		}
+
+   dataWidth  = 2;
+	if(argc>4)
+		{
+		ret =  WV_STR_S2v(argv[4],&dataWidth);
+		if(ret != WV_SOK)
+			{
+			prfBuff += sprintf(prfBuff,"input erro!\r\n"); 
+			}
+		}
+
+
+	ret = HIS_SSP_Open  (&hndl,csn,3);
+	if(ret != WV_SOK)
+		{
+		prfBuff += sprintf(prfBuff," HIS_SSP_Open erro\r\n"); 
+		}
+
+   if(addrWidth == 1)
+     {
+     txBuf[0] = regAddr & 0xff; 
+     }
+    if(addrWidth == 2)
+     {
+      txBuf[1] = regAddr & 0xff; 
+      txBuf[0] = (regAddr>> 8) & 0xff;
+     }
+     if(addrWidth == 4)
+     {
+     
+      txBuf[3] = (regAddr) & 0xff; 
+      txBuf[2] = (regAddr>> 8) & 0xff;   
+      txBuf[1] = (regAddr>> 16) & 0xff; 
+      txBuf[0] = (regAddr>> 24) & 0xff;
+     }
+ 
+ 
+      if(dataWidth == 1)
+     {
+     
+      rxBuf[0] = (data) & 0xff;  
+     } 
+ 
+ 
+ 
+     if(dataWidth == 2)
+     {
+     
+      rxBuf[1] = (data) & 0xff; 
+      rxBuf[0] = (data>> 8) & 0xff;   
+       
+     } 
+     
+ 
+    
+     if(dataWidth == 4)
+     {
+     
+      rxBuf[3] = (data) & 0xff; 
+      rxBuf[2] = (data>> 8) & 0xff;   
+      rxBuf[1] = (data>> 16) & 0xff; 
+      rxBuf[0] = (data>> 24) & 0xff;
+     } 
+    
+	ret =   HIS_SSP_Write(hndl,txBuf,addrWidth,rxBuf,dataWidth);
+	if(ret != WV_SOK)
+		{
+		prfBuff += sprintf(prfBuff,"HIS_SSP_read erro\r\n"); 
+		}
+
+	   prfBuff += sprintf(prfBuff,"get SSP Csn[%d]:\r\n",csn); 
+
+	 
+		 if(dataWidth == 1)
+			 { 
+			  prfBuff += sprintf(prfBuff,"%04x =%04x\r\n",regAddr,*(rxBuf)); 
+			 }
+		 
+		  if(dataWidth == 2)
+			 { 
+			   prfBuff += sprintf(prfBuff,"%04x =%04x\r\n",regAddr,*(WV_U16*)(rxBuf)); 
+			 }
+		   if(dataWidth == 4)
+			 { 
+			   prfBuff += sprintf(prfBuff,"%04x =%04x\r\n",regAddr,*(WV_U32*)(rxBuf)); 
+			 }
+	 
+    ret = HIS_SSP_Close (&hndl);
+     if(ret != WV_SOK)
+		{
+		 prfBuff += sprintf(prfBuff," HIS_SSP_Close erro\r\n"); 
+		}
+	return WV_SOK;
+ 	
+}
+
+
+/****************************************************************************
+
+WV_S32 HIS_SSP_Init()
+
+****************************************************************************/
+WV_S32 HIS_SSP_Init()
+{	  
+    WV_CMD_Register("get","spi","spi bus read",HIS_SSP_CmdGet); 
+    WV_CMD_Register("set","spi","spi bus write",HIS_SSP_CmdSet);
+    return WV_SOK;	
+}
+
+/****************************************************************************
+
+WV_S32 HIS_SSP_DeInit()
+
+****************************************************************************/
+WV_S32 HIS_SSP_DeInit()
+{
+     
+    return WV_SOK;  	
+}
+
+

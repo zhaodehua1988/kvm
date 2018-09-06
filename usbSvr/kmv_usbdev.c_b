@@ -1,0 +1,792 @@
+#include "kmv_usb.h"
+
+#define KMV_USB_DEV_PATH  "/dev/input/"
+#define KMV_USB_DEV_INFO_PATH "/proc/bus/input/devices"
+
+
+#define KMV_USB_KEYBD_NAME "Keyboard"
+#define KMV_USB_MOUSE_NAME "MOUSE"
+
+
+#define KMV_USB_KEYBD_NAME_ID 1
+#define KMV_USB_MOUSE_NAME_ID 2
+#define KMV_USB_DEV_INFO_MAX_BUF 1024*1024
+
+typedef struct KMV_USB_DEV_E 
+{
+	pthread_t thrHndl; 
+	unsigned int open;
+	unsigned int close; 
+	unsigned int plug; 
+	unsigned int plugCnt;
+	KMV_USB_DEVICE_INFO usbDevInfo;
+}KMV_USB_DEV_E;
+
+
+static KMV_USB_DEV_E  gUsbDev_1;
+static KMV_USB_DEV_E  gUsbDev_2;
+static KMV_USB_DEV_E  gUsbDev_3;
+static KMV_USB_DEV_E  gUsbDev_4;
+static KMV_USB_DEV_E  gUsbDev_5;
+static KMV_USB_DEV_E  gUsbDev_6;
+static KMV_USB_DEV_E  gUsbDev_7;
+static KMV_USB_DEV_E  gUsbDev_8;
+
+static int usb_RemoteChn;
+/************************************************************
+
+int KMV_USB_DEV_changeRemoteChn(int chl,int level);
+
+*************************************************************/
+int KMV_USB_DEV_changeRemoteChn(int chl,int level)
+{
+	usb_RemoteChn = chl;
+	return 0;
+}
+/************************************************************
+
+int KMV_USB_DEV_getRemoteChn();
+
+*************************************************************/
+int KMV_USB_DEV_getRemoteChn()
+{
+	
+	return usb_RemoteChn;
+}
+
+/************************************************************
+
+int KMV_USB_DEV_ChangeLevel(unsigned char chnIn,unsigned char chnOut,unsigned char ena);
+
+*************************************************************/
+int KMV_USB_DEV_ChangeLevel(int chl,int level)
+{
+	if(level <0 || level >5) 
+		return -1;
+	
+	switch(chl)
+	{
+
+		case 1:
+			gUsbDev_1.usbDevInfo.level = level;
+			gUsbDev_2.usbDevInfo.level = level;
+
+			break;
+		case 2:
+			gUsbDev_3.usbDevInfo.level = level;
+			gUsbDev_4.usbDevInfo.level = level;
+
+			break;
+		case 3:
+			gUsbDev_5.usbDevInfo.level = level;
+			gUsbDev_6.usbDevInfo.level = level;
+
+			break;
+		case 4:
+			gUsbDev_7.usbDevInfo.level = level;
+			gUsbDev_8.usbDevInfo.level = level;
+			break;	
+		default:
+			break;
+	}
+
+	return 0;
+	
+}
+/************************************************************
+
+int KMV_USB_DEV_ChlSw(unsigned char chnIn,unsigned char chnOut,unsigned char ena);
+
+*************************************************************/
+int KMV_USB_DEV_ChlSw(unsigned char outChn,unsigned char inChn,unsigned char ena)
+{
+	WV_S32 ret = 0;
+
+	switch(outChn)
+	{
+		case 0:
+			gUsbDev_1.usbDevInfo.chn = inChn ;
+			gUsbDev_1.usbDevInfo.ena = ena & 0x01;
+			gUsbDev_2.usbDevInfo.chn = inChn;
+			gUsbDev_2.usbDevInfo.ena = ena & 0x01;
+			
+			break; 
+		case 1:
+			gUsbDev_3.usbDevInfo.chn = inChn;
+			gUsbDev_3.usbDevInfo.ena = ena & 0x01;
+			gUsbDev_4.usbDevInfo.chn = inChn;
+			gUsbDev_4.usbDevInfo.ena = ena & 0x01;
+			break;
+		case 2:
+			gUsbDev_5.usbDevInfo.chn = inChn;
+			gUsbDev_5.usbDevInfo.ena = ena & 0x01;
+			gUsbDev_6.usbDevInfo.chn = inChn;
+			gUsbDev_6.usbDevInfo.ena = ena & 0x01;
+			break;
+		case 3:
+			gUsbDev_7.usbDevInfo.chn = inChn;
+			gUsbDev_7.usbDevInfo.ena = ena & 0x01;
+			gUsbDev_8.usbDevInfo.chn = inChn;
+			gUsbDev_8.usbDevInfo.ena = ena & 0x01;
+			break;
+		default:
+
+			ret = -1;
+			break;
+ 	
+	}
+
+	return ret;
+}
+
+
+/************************************************************
+
+int KMV_USB_DEV_SetGroupChl(char *pDevName,char chn);
+
+*************************************************************/
+int KMV_USB_DEV_SetGroupChl(char *pDevName,char chn)
+{
+
+
+
+	WV_S32 ret;	
+	if(strncmp(pDevName, gUsbDev_1.usbDevInfo.physDev,KMV_USB_DEVICE_DATAMAX_LEN) == 0){	
+		gUsbDev_1.usbDevInfo.chn = chn;
+		gUsbDev_2.usbDevInfo.chn = chn;
+		 EXT_DVI_SetSw(0,chn,1);
+		 EXT_VGA_SetSw(0, chn,1); 
+		KMV_USB_DEV_ChlSw(0,chn,1);
+		//TSK_SW_FreeKey(0);
+		//ret = TSK_SW_LocalKey(chn,0,gUsbDev_1.usbDevInfo.level);
+		//TSK_SW_LocalVideo(chn,0,1);
+	}else if(strncmp(pDevName, gUsbDev_2.usbDevInfo.physDev,KMV_USB_DEVICE_DATAMAX_LEN) == 0){
+
+		gUsbDev_1.usbDevInfo.chn = chn;
+		gUsbDev_2.usbDevInfo.chn = chn;
+		EXT_DVI_SetSw(0,chn,1); 
+		EXT_VGA_SetSw(0, chn,1);
+		KMV_USB_DEV_ChlSw(0,chn,1);
+		//TSK_SW_FreeKey(0);
+		//ret = TSK_SW_LocalKey(chn,0,gUsbDev_2.usbDevInfo.level);		
+		//TSK_SW_LocalVideo(chn,0,1);
+  		
+	}else if(strncmp(pDevName, gUsbDev_3.usbDevInfo.physDev,KMV_USB_DEVICE_DATAMAX_LEN) == 0){
+
+		gUsbDev_3.usbDevInfo.chn = chn;
+		gUsbDev_4.usbDevInfo.chn = chn;
+		EXT_DVI_SetSw(1,chn,1); 
+		 EXT_VGA_SetSw(1, chn,1);
+		KMV_USB_DEV_ChlSw(1,chn,1);   
+		//TSK_SW_FreeKey(1);
+		//ret = TSK_SW_LocalKey(chn,1,gUsbDev_3.usbDevInfo.level);
+
+		//TSK_SW_LocalVideo(chn,1,1);
+
+
+	}else if(strncmp(pDevName, gUsbDev_4.usbDevInfo.physDev,KMV_USB_DEVICE_DATAMAX_LEN) == 0){
+
+		gUsbDev_3.usbDevInfo.chn = chn;
+		gUsbDev_4.usbDevInfo.chn = chn;
+		EXT_DVI_SetSw(1,chn,1);
+		EXT_VGA_SetSw(1, chn,1);
+		KMV_USB_DEV_ChlSw(1,chn,1);  
+		//TSK_SW_FreeKey(1);
+		//ret = TSK_SW_LocalKey(chn,1,gUsbDev_4.usbDevInfo.level);
+
+		//TSK_SW_LocalVideo(chn,1,1);
+
+  
+	}else if(strncmp(pDevName, gUsbDev_5.usbDevInfo.physDev,KMV_USB_DEVICE_DATAMAX_LEN) == 0){
+
+		gUsbDev_5.usbDevInfo.chn = chn;
+		gUsbDev_6.usbDevInfo.chn = chn;
+		EXT_DVI_SetSw(2,chn,1);
+		EXT_VGA_SetSw(2, chn,1);
+		KMV_USB_DEV_ChlSw(2,chn,1); 
+		/*		
+		TSK_SW_FreeKey(2);
+		ret = TSK_SW_LocalKey(chn,2,gUsbDev_5.usbDevInfo.level);
+		if(ret != 0)
+		{
+			gUsbDev_5.usbDevInfo.chn = -1;
+			gUsbDev_6.usbDevInfo.chn = -1;
+
+		}else{
+			gUsbDev_5.usbDevInfo.chn = chn;
+			gUsbDev_6.usbDevInfo.chn = chn;
+		}
+		TSK_SW_LocalVideo(chn,2,1);
+		*/
+
+   
+	}else if(strncmp(pDevName, gUsbDev_6.usbDevInfo.physDev,KMV_USB_DEVICE_DATAMAX_LEN) == 0){
+
+		gUsbDev_5.usbDevInfo.chn = chn;
+		gUsbDev_6.usbDevInfo.chn = chn;
+		EXT_DVI_SetSw(2,chn,1);
+		EXT_VGA_SetSw(2, chn,1);
+		KMV_USB_DEV_ChlSw(2,chn,1);    
+		/*		
+		TSK_SW_FreeKey(2);
+		ret = TSK_SW_LocalKey(chn,2,gUsbDev_6.usbDevInfo.level);
+		if(ret != 0)
+		{
+			gUsbDev_5.usbDevInfo.chn = -1;
+			gUsbDev_6.usbDevInfo.chn = -1;
+			printf("key sw level is low [%d]\n",gUsbDev_6.usbDevInfo.level);
+		}else{
+			gUsbDev_5.usbDevInfo.chn = chn;
+			gUsbDev_6.usbDevInfo.chn = chn;
+		}
+		TSK_SW_LocalVideo(chn,2,1);
+		*/
+	}else if(strncmp(pDevName, gUsbDev_7.usbDevInfo.physDev,KMV_USB_DEVICE_DATAMAX_LEN) == 0){
+
+		gUsbDev_7.usbDevInfo.chn = chn;
+		gUsbDev_8.usbDevInfo.chn = chn;
+		EXT_DVI_SetSw(3,chn,1); 
+	    EXT_VGA_SetSw(3, chn,1);
+		KMV_USB_DEV_ChlSw(3,chn,1); 
+		/*		
+		TSK_SW_FreeKey(3);
+		ret = TSK_SW_LocalKey(chn,3,gUsbDev_7.usbDevInfo.level);
+		if(ret != 0)
+		{
+			gUsbDev_7.usbDevInfo.chn = -1;
+			gUsbDev_8.usbDevInfo.chn = -1;
+			printf("key sw level is low [%d]\n",gUsbDev_7.usbDevInfo.level);
+		}else{
+			gUsbDev_7.usbDevInfo.chn = chn;
+			gUsbDev_8.usbDevInfo.chn = chn;
+		}
+		TSK_SW_LocalVideo(chn,3,1);
+ 		*/
+	}else if(strncmp(pDevName, gUsbDev_8.usbDevInfo.physDev,KMV_USB_DEVICE_DATAMAX_LEN) == 0){
+
+		gUsbDev_7.usbDevInfo.chn = chn;
+		gUsbDev_8.usbDevInfo.chn = chn;
+		EXT_DVI_SetSw(3,chn,1); 
+		EXT_VGA_SetSw(3, chn,1); 
+		KMV_USB_DEV_ChlSw(3,chn,1);
+		/*
+		TSK_SW_FreeKey(3);
+		ret = TSK_SW_LocalKey(chn,3,gUsbDev_8.usbDevInfo.level);
+		if(ret != 0)
+		{
+			gUsbDev_7.usbDevInfo.chn = -1;
+			gUsbDev_8.usbDevInfo.chn = -1;
+			printf("key sw level is low [%d]\n",gUsbDev_8.usbDevInfo.level);
+		}else{
+			gUsbDev_7.usbDevInfo.chn = chn;
+			gUsbDev_8.usbDevInfo.chn = chn;
+		}
+		TSK_SW_LocalVideo(chn,3,1);
+ 		*/
+	}
+
+	return 0;
+}
+
+
+
+/************************************************************
+
+int KMV_USB_DEV_SetChl(char chn,unsigned char *pBuf,int len);
+
+*************************************************************/
+int KMV_USB_DEV_SetChl(KMV_USB_DEVICE_INFO *pInfo,unsigned char *pBuf,int len)
+{
+
+	char chn;
+
+	if(len == 4)
+	{
+		if((pBuf[0] == 0x83) && (pBuf[2] == 0x00) && ((pBuf[1] == 0x01) || (pBuf[1] == 0x10)))
+		{
+
+			switch(pBuf[3])
+			{
+				case 0x3a://ctrl + F1
+					KMV_KEYBD_PopAllKey(pInfo);
+					KMV_USB_DEV_SetGroupChl(pInfo->physDev,0);
+
+					KMV_USB_printf("change chn to %d\n",pInfo->chn);
+					break;
+				case 0x3b://ctrl + F2
+					KMV_KEYBD_PopAllKey(pInfo);
+					KMV_USB_DEV_SetGroupChl(pInfo->physDev,1);
+					KMV_USB_printf("change chn to 1\n");
+					break;
+				case 0x3c://ctrl + F3
+					KMV_KEYBD_PopAllKey(pInfo);
+					KMV_USB_DEV_SetGroupChl(pInfo->physDev,2);
+					KMV_USB_printf("change chn to 2 \n");
+					break;
+				case 0x3d://ctrl + F4
+					KMV_KEYBD_PopAllKey(pInfo);
+					KMV_USB_DEV_SetGroupChl(pInfo->physDev,3);
+					KMV_USB_printf("change chn to 3\n");
+					break;
+				case 0x3e://ctrl +F5
+					KMV_KEYBD_PopAllKey(pInfo);
+					KMV_USB_DEV_SetGroupChl(pInfo->physDev,4);
+					//set remote server addr
+					chn = 0;
+					KMV_UDP_ClientSend(&chn,1,1);//KMV_UDP_ClientSend(char *buf,int len,unsigned char cmd)
+					KMV_USB_printf("change chn to remote 0\n");
+					break;
+				case 0x3f://ctrl+F6
+					KMV_KEYBD_PopAllKey(pInfo);
+					KMV_USB_DEV_SetGroupChl(pInfo->physDev,4);
+					chn = 1;
+					KMV_UDP_ClientSend(&chn,1,1);
+					KMV_USB_printf("change chn to remote 1\n");
+					break;
+				case 0x40://ctrl+F7
+					KMV_KEYBD_PopAllKey(pInfo);
+					KMV_USB_DEV_SetGroupChl(pInfo->physDev,4);
+					chn = 2;
+					KMV_UDP_ClientSend(&chn,1,1);
+					KMV_USB_printf("change chn to remote 2\n");
+					break;
+				case 0x41://ctrl+F8
+					KMV_KEYBD_PopAllKey(pInfo);
+					KMV_USB_DEV_SetGroupChl(pInfo->physDev,4);
+					chn = 3;
+					KMV_UDP_ClientSend(&chn,1,1);
+					KMV_USB_printf("change chn to remote 3\n");
+					break;
+				default :
+					break;					
+			}
+	
+		
+		}
+	}
+	
+
+	return 0;
+}
+
+/************************************************************
+
+int KMV_USB_DEV_GetDevName(const char *pLocal,const char *pDes);
+
+*************************************************************/
+char * KMV_USB_DEV_GetDevName(const char*pLocal,const char *pDes)
+{
+
+	return strstr(pLocal,pDes);
+}
+
+/************************************************************
+
+int KMV_USB_DEV_GetInfo(KMV_USB_DEVICE_INFO *pInfo);
+
+*************************************************************/
+int KMV_USB_DEV_GetInfo(KMV_USB_DEVICE_INFO *pInfo)
+{
+	FILE *fp;
+	char buf[1024];
+	int state = 0;
+	fp=fopen(KMV_USB_DEV_INFO_PATH,"r");
+	if(fp==NULL)
+	{
+		
+		return -1;
+	}
+	pInfo->name = -1;
+	while(fgets(buf,1024,fp))
+	{
+		
+		//get name
+		if(buf[0] == 'N')
+		{
+			if(KMV_USB_DEV_GetDevName(buf,KMV_USB_KEYBD_NAME) != NULL){
+
+				pInfo->name = KMV_USB_KEYBD_NAME_ID;
+
+			}else if(KMV_USB_DEV_GetDevName(buf,KMV_USB_MOUSE_NAME) != NULL){
+
+				pInfo->name = KMV_USB_MOUSE_NAME_ID;
+			}else{
+				pInfo->name = -1;
+			}
+
+
+		}
+		//compare usbDev physId
+		if(buf[0] == 'P')
+		{
+			if(strncmp(&buf[8],pInfo->physDev,20) == 0)
+			{
+				KMV_USB_printf("dev name %s\n",pInfo->physDev);
+				state = 1;
+				printf("find dev\n");
+				
+			}else{
+				pInfo->name = -1;
+				//KMV_USB_printf("not found \n");
+			}
+		}
+		//get handlers
+		if(state == 1){
+
+			while(fgets(buf,1024,fp)){
+					if(buf[0] == 'H'){
+						if(pInfo->name == KMV_USB_KEYBD_NAME_ID){
+							
+							if(strncmp(&buf[12],"kbd",3) == 0){
+								memcpy(pInfo->handler,&buf[16],6);
+								KMV_USB_printf("keyBd get handle:%s\n",pInfo->handler);
+								break;
+							}
+						}else if(pInfo->name == KMV_USB_MOUSE_NAME_ID){
+								memcpy(pInfo->handler,&buf[12],6);
+								KMV_USB_printf("mouse get handle:%s\n",pInfo->handler);
+								break;
+								
+						}else{
+							
+							break;
+						}
+				}			
+					
+			}
+			break;
+		}
+	}
+	fclose(fp);
+	return 0;
+
+}
+
+/************************************************************
+
+int KMV_USB_DEV_GetInfo2(KMV_USB_DEVICE_INFO *pInfo);
+
+*************************************************************/
+int KMV_USB_DEV_GetInfo2(KMV_USB_DEVICE_INFO *pInfo)
+{
+	FILE *fp;
+	char buf[1024];
+	int state = 0;
+	fp=fopen(KMV_USB_DEV_INFO_PATH,"r");
+	if(fp==NULL)
+	{
+		
+		return -1;
+	}
+	pInfo->name = -1;
+	while(fgets(buf,1024,fp))
+	{
+		
+		//get name
+		if(buf[0] == 'N')
+		{
+			if(KMV_USB_DEV_GetDevName(buf,KMV_USB_KEYBD_NAME) != NULL){
+
+				pInfo->name = KMV_USB_KEYBD_NAME_ID;
+
+			}else if(KMV_USB_DEV_GetDevName(buf,KMV_USB_MOUSE_NAME) != NULL){
+
+				pInfo->name = KMV_USB_MOUSE_NAME_ID;
+			}else{
+				pInfo->name = -1;
+				
+			}
+
+
+		}
+		//compare usbDev physId
+		if(buf[0] == 'P')
+		{
+			if(strncmp(&buf[8],pInfo->physDev,20) == 0)
+			{
+				KMV_USB_printf("dev name %s\n",pInfo->physDev);
+				state = 1;
+				KMV_USB_printf("find dev\n");
+				
+			}else{
+				pInfo->name = -1;
+				//KMV_USB_printf("not found \n");
+			}
+		}
+		//get handlers
+		if(state == 1){
+
+			while(fgets(buf,1024,fp)){
+					if(buf[0] == 'H'){
+						
+						if(pInfo->name == 1){//get kbd
+							
+							if(strncmp(&buf[12],"kbd",3) == 0){
+								memcpy(pInfo->handler,&buf[16],6);
+								KMV_USB_printf("keyBd get handle:%s\n",pInfo->handler);
+								break;
+							}
+						}else if(pInfo->name == 2){ //get mouse
+								memcpy(pInfo->handler,&buf[12],6);
+								KMV_USB_printf("mouse get handle:%s\n",pInfo->handler);
+								break;
+								
+						}else{//get other bdk or mouse
+							//get B:EV=17 mouse;B: EV=120013 kebyd
+
+							if(strncmp(&buf[12],"kbd",3) == 0){
+								memcpy(pInfo->handler,&buf[16],6);
+								KMV_USB_printf("keyBd get handle:%s\n",pInfo->handler);
+
+							}else if(strncmp(&buf[12],"mouse",5) == 0){
+								memcpy(pInfo->handler,&buf[12],6);
+								KMV_USB_printf("mouse get handle:%s\n",pInfo->handler);
+							}
+
+							while(fgets(buf,1024,fp))
+							{
+
+								if(strncmp(buf,"B: EV=",6) == 0)
+								{
+										
+									if(strncmp(&buf[6],"17",2) == 0)
+									{
+										//printf("B: EV=17\n");
+										pInfo->name = KMV_USB_MOUSE_NAME_ID;
+									
+										//goto end;
+									}else if(strncmp(&buf[6],"120013",6) == 0){
+
+										pInfo->name = KMV_USB_KEYBD_NAME_ID;
+										//goto end;
+									}else{
+										
+										pInfo->name = -1;
+										//goto end;
+									}								
+								}
+								
+
+							}//end while(fgets(buf,1024,fp)	
+							break;
+						}//end if(buf[0] == 'H')
+
+				}			
+					
+			}
+			break;
+		}
+	}
+end:
+	fclose(fp);
+	return 0;
+
+}
+
+
+
+/************************************************************
+
+void * KMV_USB_DEV_Proc(void *prm);
+
+*************************************************************/
+void * KMV_USB_DEV_Proc(void *prm)
+{
+
+	int ret = 0;
+	KMV_USB_DEV_E  * pDev;  
+	KMV_USB_DEVICE_INFO *pInfo;
+	pDev = (KMV_USB_DEV_E  *) prm;
+	pInfo = &pDev->usbDevInfo;
+	pDev-> open  = 1;
+	pDev-> close  = 0;
+	//sleep(5);		
+	while(pDev->open == 1)
+	{  
+		ret = KMV_USB_DEV_GetInfo2(pInfo);
+
+		if((ret == 0) && (pInfo->name != -1))
+		{	
+			pDev->plug = 1;
+			KMV_USB_printf("dev:%s,info->name[%d]\n",pInfo->handler,pInfo->name);
+			if(pInfo->name == KMV_USB_KEYBD_NAME_ID){
+				 KMV_KEYBD_Proc(pInfo);
+			}else if(pInfo->name == KMV_USB_MOUSE_NAME_ID){
+				KMV_MOUSE_Proc(pInfo);
+				
+			}
+		}else{
+			pDev->plug = 0;
+			//KMV_USB_printf("dev plug out\n");
+		}
+		
+	   sleep(1);		 
+	} 
+
+	pDev-> open  = 0;
+	pDev-> close = 1;
+	return NULL;
+
+}
+
+/************************************************************
+
+int KMV_USB_DEV_Open();
+
+*************************************************************/
+int KMV_USB_DEV_Open()
+{
+	
+	usb_RemoteChn = 0;
+
+	//int ret;
+	/****************************************/
+	//port 1
+	memset(&gUsbDev_1,0,sizeof(KMV_USB_DEV_E));
+	strcpy(gUsbDev_1.usbDevInfo.physDev,KMV_USB_HUB_PHYS1);
+	gUsbDev_1.usbDevInfo.chn = 0;
+	gUsbDev_1.usbDevInfo.ena = 1;
+	gUsbDev_1.usbDevInfo.level = 1;
+	pthread_create(&(gUsbDev_1.thrHndl),NULL,(void *)KMV_USB_DEV_Proc,(void *)&gUsbDev_1);
+
+	//port 2
+	memset(&gUsbDev_2,0,sizeof(KMV_USB_DEV_E));
+	strcpy(gUsbDev_2.usbDevInfo.physDev,KMV_USB_HUB_PHYS2);
+	gUsbDev_2.usbDevInfo.chn = 0;
+	gUsbDev_2.usbDevInfo.ena = 1;
+	gUsbDev_2.usbDevInfo.level = 1;
+	pthread_create(&(gUsbDev_2.thrHndl),NULL,(void *)KMV_USB_DEV_Proc,(void *)&gUsbDev_2);
+
+	//port 3
+	memset(&gUsbDev_3,0,sizeof(KMV_USB_DEV_E));
+	strcpy(gUsbDev_3.usbDevInfo.physDev,KMV_USB_HUB_PHYS3);
+	gUsbDev_3.usbDevInfo.chn = 1;	
+	gUsbDev_3.usbDevInfo.ena = 1;
+	gUsbDev_3.usbDevInfo.level = 2;
+	pthread_create(&(gUsbDev_3.thrHndl),NULL,(void *)KMV_USB_DEV_Proc,(void *)&gUsbDev_3);
+
+	//port 4
+	memset(&gUsbDev_4,0,sizeof(KMV_USB_DEV_E));
+	strcpy(gUsbDev_4.usbDevInfo.physDev,KMV_USB_HUB_PHYS4);
+	gUsbDev_4.usbDevInfo.chn = 1;	
+	gUsbDev_4.usbDevInfo.ena = 1;
+	gUsbDev_4.usbDevInfo.level = 2;
+	pthread_create(&(gUsbDev_4.thrHndl),NULL,(void *)KMV_USB_DEV_Proc,(void *)&gUsbDev_4);
+
+	//port 5
+	memset(&gUsbDev_5,0,sizeof(KMV_USB_DEV_E));
+	strcpy(gUsbDev_5.usbDevInfo.physDev,KMV_USB_HUB_PHYS5);
+	gUsbDev_5.usbDevInfo.chn = 2;
+	gUsbDev_5.usbDevInfo.ena = 1;
+	gUsbDev_5.usbDevInfo.level = 2;	
+	pthread_create(&(gUsbDev_5.thrHndl),NULL,(void *)KMV_USB_DEV_Proc,(void *)&gUsbDev_5);
+
+	//port 6
+	memset(&gUsbDev_6,0,sizeof(KMV_USB_DEV_E));
+	strcpy(gUsbDev_6.usbDevInfo.physDev,KMV_USB_HUB_PHYS6);
+	gUsbDev_6.usbDevInfo.chn = 2;
+	gUsbDev_6.usbDevInfo.ena = 1;
+	gUsbDev_6.usbDevInfo.level = 2;
+	pthread_create(&(gUsbDev_6.thrHndl),NULL,(void *)KMV_USB_DEV_Proc,(void *)&gUsbDev_6);
+
+	//port 7
+	memset(&gUsbDev_7,0,sizeof(KMV_USB_DEV_E));
+	strcpy(gUsbDev_7.usbDevInfo.physDev,KMV_USB_HUB_PHYS7);
+	gUsbDev_7.usbDevInfo.chn = 3;
+	gUsbDev_7.usbDevInfo.ena = 1;
+	gUsbDev_7.usbDevInfo.level = 2;
+	pthread_create(&(gUsbDev_7.thrHndl),NULL,(void *)KMV_USB_DEV_Proc,(void *)&gUsbDev_7);
+
+	//port 8
+	memset(&gUsbDev_8,0,sizeof(KMV_USB_DEV_E));
+	strcpy(gUsbDev_8.usbDevInfo.physDev,KMV_USB_HUB_PHYS8);
+	gUsbDev_8.usbDevInfo.chn = 3;
+	gUsbDev_8.usbDevInfo.ena = 1;
+	gUsbDev_8.usbDevInfo.level = 2;
+	pthread_create(&(gUsbDev_8.thrHndl),NULL,(void *)KMV_USB_DEV_Proc,(void *)&gUsbDev_8);
+	return 0;
+}
+
+/********************************************************************
+
+int  KMV_KEYBD_Close();
+
+********************************************************************/
+int  KMV_USB_DEV_Close()
+{
+
+
+   if(gUsbDev_1.open == 1)
+   {
+   	  gUsbDev_1.open = 0;
+
+      pthread_cancel(gUsbDev_1.thrHndl);
+	  pthread_join(gUsbDev_1.thrHndl,NULL);
+   }
+	
+   if(gUsbDev_2.open == 1)
+   {
+   	  gUsbDev_2.open = 0;
+
+      pthread_cancel(gUsbDev_2.thrHndl);
+	  pthread_join(gUsbDev_2.thrHndl,NULL);
+   }
+
+   if(gUsbDev_3.open == 1)
+   {
+   	  gUsbDev_3.open = 0;
+
+      pthread_cancel(gUsbDev_3.thrHndl);
+	  pthread_join(gUsbDev_3.thrHndl,NULL);
+   }
+
+
+   if(gUsbDev_4.open == 1)
+   {
+   	  gUsbDev_4.open = 0;
+
+      pthread_cancel(gUsbDev_4.thrHndl);
+	  pthread_join(gUsbDev_4.thrHndl,NULL);
+   }
+
+
+   if(gUsbDev_5.open == 1)
+   {
+   	  gUsbDev_5.open = 0;
+
+      pthread_cancel(gUsbDev_5.thrHndl);
+	  pthread_join(gUsbDev_5.thrHndl,NULL);
+   }
+
+
+   if(gUsbDev_6.open == 1)
+   {
+   	  gUsbDev_6.open = 0;
+
+      pthread_cancel(gUsbDev_6.thrHndl);
+	  pthread_join(gUsbDev_6.thrHndl,NULL);
+   }
+
+
+   if(gUsbDev_7.open == 1)
+   {
+   	  gUsbDev_7.open = 0;
+
+      pthread_cancel(gUsbDev_7.thrHndl);
+	  pthread_join(gUsbDev_7.thrHndl,NULL);
+   }
+
+
+   if(gUsbDev_8.open == 1)
+   {
+   	  gUsbDev_8.open = 0;
+
+      pthread_cancel(gUsbDev_8.thrHndl);
+	  pthread_join(gUsbDev_8.thrHndl,NULL);
+   }
+   return 0; 
+}
+
+
+
+

@@ -1,0 +1,6 @@
+#ifndef _EXT_VGA_INOUT_H__
+#define _EXT_VGA_INOUT_H__
+#include "sys.h"
+WV_S32  EXT_VGA_Init();
+WV_S32  EXT_VGA_DeInit(); 
+#endif

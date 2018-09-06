@@ -1,0 +1,57 @@
+#include"wv_stream.h" 
+#define ESTX_PAG_LOAD_LEN                1316
+#define ESTX_PAG_HEAD_LEN                12
+#define ESTX_PAG_LEN                     ESTX_PAG_LOAD_LEN + ESTX_PAG_HEAD_LEN 
+
+
+/*******************************************************************************************
+
+WV_S32  WV_STREAM_Send(WV_ETH_UDP_TX_E *pDev,WV_U8  *pBuf, WV_U32 len, WV_U64 ptsUs, WV_U8 pid,WV_U32 *pCnt)
+
+*******************************************************************************************/
+
+WV_S32  WV_STREAM_Send(WV_ETH_UDP_TX_E *pDev,WV_U8 *pBuf, WV_U32 len, WV_U64 ptsUs,WV_U8 pid,WV_U32 *pCnt)
+{
+
+	WV_U8 sockBuf[2048];
+	WV_U8 *esBuf,*pCur;
+	WV_U32 esLen,fillLen;
+	WV_S32 ret;
+		esLen = len;
+		esBuf = pBuf;
+		while(esLen >0)
+    	{
+			sockBuf[0] = 0x47;  
+			if(esLen > ESTX_PAG_LOAD_LEN)
+			{
+				sockBuf[1] = 0x40;
+				fillLen = ESTX_PAG_LOAD_LEN;
+			}
+			else  //end of ES
+			{
+				sockBuf[1] = 0x80; 
+				fillLen = esLen;
+			}
+		 	
+		 	sockBuf[2] = pid;
+			sockBuf[3]  = *pCnt & 0xff;
+			*((WV_U64 *)(sockBuf+4)) = ptsUs;  
+		
+		
+			pCur = sockBuf + ESTX_PAG_HEAD_LEN;
+			memcpy(pCur,esBuf, fillLen);
+			esLen    = esLen -fillLen;
+			esBuf    = esBuf +fillLen;
+		    (*pCnt)++;
+			ret = WV_UDP_Tx(pDev,sockBuf, fillLen + ESTX_PAG_HEAD_LEN);
+
+			if(ret != WV_SOK )			
+			{ 
+			  return  WV_EFAIL; 
+			}     	
+
+		} 
+
+	return  WV_SOK;  
+}
+

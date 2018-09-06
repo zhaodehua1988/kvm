@@ -1,0 +1,5 @@
+#ifndef _WV_COMM_FILE_H_
+#define _WV_COMM_FILE_H_
+#include "wv_common.h" 
+WV_S32   WV_FILE_Access(WV_S32 *filename);
+#endif

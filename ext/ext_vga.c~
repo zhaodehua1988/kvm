@@ -1,0 +1,406 @@
+#include"ext_vga.h"
+#include"his_iic.h"
+#include"his_gpio.h"
+#include"his_ssp.h"
+#include"ext_fpga.h"
+
+typedef struct EXT_VGA_CHN_E 
+{
+  
+  WV_U8  r;
+  WV_U8  g;
+  WV_U8  b;
+}EXT_VGA_CHN_E ;
+ 
+static  EXT_VGA_CHN_E   vgaInMap[] =
+{
+   {0,1,2},
+   {3,4,5},
+   {6,7,8},
+   {9,10,11},
+   {12,13,14}
+}; 
+/*
+static  EXT_VGA_CHN_E   vgaInMap[] =
+{
+   {0,0,0},
+   {0,0,0},
+   {0,0,0},
+   {0,0,0},
+   {0,0,0}
+};
+*/
+static  EXT_VGA_CHN_E   vgaOutMap[] =
+{
+   {0,1,2},
+   {3,4,5},
+   {6,7,8},
+   {9,10,11},
+   {12,13,14}
+};
+
+
+typedef struct EXT_VGA_DEV_E 
+{
+// 
+  HIS_IIC_HNDL      iicHndl;
+  HIS_GPIO_DEV_E    inSel[4];
+  HIS_GPIO_DEV_E    edidSel[4];
+  HIS_GPIO_DEV_E    outSel[4];  
+  HIS_GPIO_DEV_E    swRset;
+  HIS_SSP_HNDL      sspHndl;
+  // statute 
+  WV_U8       		iicBus; 
+  WV_U8       		iicAddr;
+  //
+  WV_U8             sw[10];
+   WV_U8            hv[5]; 
+  //
+  WV_U32          decWidth;
+  WV_U32          decHeight;
+  WV_U32          decFrameRate; 
+  //
+   WV_U8          edid[256]; 
+  
+	
+}EXT_VGA_DEV_E ;
+
+static EXT_VGA_DEV_E  gVgaDev;
+
+/*****************************************************
+
+WV_S32  EXT_VGA_IicInSel(WV_S32  chn,EXT_VGA_DEV_E *pDev);
+
+*****************************************************/
+WV_S32  EXT_VGA_IicInSel(WV_S32  chn,EXT_VGA_DEV_E *pDev)
+{
+	WV_CHECK_RET( HIS_GPIO_Set(pDev-> inSel[chn],1)  );
+	return WV_SOK;
+}
+
+/*****************************************************
+
+WV_S32  EXT_VGA_IicInDeSel(WV_S32  chn,EXT_VGA_DEV_E *pDev);
+
+*****************************************************/
+WV_S32  EXT_VGA_IicInDeSel(WV_S32  chn,EXT_VGA_DEV_E *pDev)
+{
+	WV_CHECK_RET( HIS_GPIO_Set(pDev-> inSel[chn],0)  );
+	return WV_SOK;
+}
+
+/*****************************************************
+
+WV_S32  EXT_VGA_IicOutSel(WV_S32  chn,EXT_VGA_DEV_E *pDev);
+
+*****************************************************/
+WV_S32  EXT_VGA_IicOutSel(WV_S32  chn,EXT_VGA_DEV_E *pDev)
+{
+	WV_CHECK_RET( HIS_GPIO_Set(pDev-> outSel[chn],1)  );
+	return WV_SOK;
+}
+
+/*****************************************************
+
+WV_S32  EXT_VGA_IicOutDeSel(WV_S32  chn,EXT_VGA_DEV_E *pDev);
+
+*****************************************************/
+WV_S32  EXT_VGA_IicOutDeSel(WV_S32  chn,EXT_VGA_DEV_E *pDev)
+{
+	WV_CHECK_RET( HIS_GPIO_Set(pDev-> outSel[chn],0)  );
+	return WV_SOK;
+}
+
+
+/*****************************************************
+
+WV_S32  EXT_VGA_IicEdidSel(WV_S32  chn,EXT_VGA_DEV_E *pDev);
+
+*****************************************************/
+WV_S32  EXT_VGA_IicEdidSel(WV_S32  chn,EXT_VGA_DEV_E *pDev)
+{
+	WV_CHECK_RET( HIS_GPIO_Set(pDev-> edidSel[chn],1)  );
+	return WV_SOK;
+}
+
+/*****************************************************
+
+WV_S32  EXT_VGA_IicEdidDeSel(WV_S32  chn,EXT_VGA_DEV_E *pDev);
+
+*****************************************************/
+WV_S32  EXT_VGA_IicEdidDeSel(WV_S32  chn,EXT_VGA_DEV_E *pDev)
+{
+	WV_CHECK_RET( HIS_GPIO_Set(pDev-> edidSel[chn],0)  );
+	return WV_SOK;
+}
+
+
+
+/**********************************************************************************
+
+WV_S32 EXT_VGA_Read(EXT_VGA_DEV_E * pDev ,WV_U8 *pData);
+
+**********************************************************************************/
+WV_S32 EXT_VGA_IicRead(EXT_VGA_DEV_E * pDev ,WV_U8 reg,WV_U8 *pData)
+{ 
+ 
+   WV_CHECK_RET( HIS_IIC_Read8 (pDev-> iicHndl,pDev->iicAddr, reg, pData, 1) );
+  return WV_SOK;	
+}
+/**********************************************************************************
+
+WV_S32 EXT_VGA_Write(EXT_VGA_DEV_E * pDev ,WV_U8 data);
+
+**********************************************************************************/
+WV_S32 EXT_VGA_IicWrite(EXT_VGA_DEV_E * pDev ,WV_U8 reg,WV_U8 data)
+{ 
+ 
+   WV_CHECK_RET( HIS_IIC_Write8 (pDev-> iicHndl,pDev->iicAddr, reg,&data, 1) );
+  return WV_SOK;	
+}
+
+
+/**********************************************************************************
+
+WV_S32 EXT_VGA_SetSw(EXT_VGA_DEV_E * pDev );
+
+**********************************************************************************/
+WV_S32 EXT_VGA_SetSwConf(WV_U8 out,WV_U8 in,WV_U8 ena,WV_U8 * pBuf)
+{   
+     WV_U8  inChn,outChn,swByte,bitNum,byteNum;
+     WV_S32 i;
+     inChn   =  in;
+     outChn  =  out; 
+ 
+     //  WV_printf("switch  %d to %d  ena = %d\r\n",in,out,ena); 
+     swByte  = inChn & 0xF;
+     if(ena == 1)
+      {
+       swByte  |=  0x10;
+      }
+     
+      pBuf[out] =  swByte;
+    //  WV_printf("EXT_VGA_SetSwConf swByte = %#x\r\n",swByte); 
+     /*  
+      for(i =0;i<5;i++)
+      {
+        // MSB first   
+        byteNum = 9 -(outChn *5 + i)/8;
+        bitNum  =  (outChn *5 + i)%8;
+        bitNum  =   7 - bitNum;   //spi Msb first
+        //bitNum  =   bitNum;   // spi Lsb first
+        
+        if( (swByte &  0x10) == 0x10 )
+        {       
+          pBuf[byteNum]  |=  0x01<<  bitNum;
+        }
+        else
+        {
+          pBuf[byteNum]  &=   ~(0x01<<  bitNum);
+		}
+		
+         swByte =swByte<<1;
+         //WV_printf("EXT_VGA_SetSwConf swByte = %d bitNum = %d  buf[%d]= %#x \r\n",swByte,bitNum,byteNum,pBuf[byteNum]); 
+      }
+      
+   //  for(i=0;i<10;i++)
+  	//{
+    //   WV_printf("VGA swith  reg   %d  = %#x\r\n",i,pBuf[i] );
+	//}
+ 
+      */
+     return WV_SOK;	
+}
+
+
+
+/**********************************************************************************
+
+WV_S32 EXT_VGA_DevInit(EXT_VGA_DEV_E * pDev );
+
+**********************************************************************************/
+WV_S32 EXT_VGA_DevInit(EXT_VGA_DEV_E * pDev )
+{ 
+    WV_S32 i;
+    HIS_IIC_Open(&pDev-> iicHndl,pDev->iicBus);
+    for(i=0;i<4;i++){
+		HIS_GPIO_SetCfg(pDev-> inSel[i],0);
+		HIS_GPIO_Set(pDev-> inSel[i],1);
+		HIS_GPIO_SetCfg(pDev-> edidSel[i],0);
+		HIS_GPIO_Set(pDev-> edidSel[i],0);
+		HIS_GPIO_SetCfg(pDev-> outSel[i],0);
+		HIS_GPIO_Set(pDev-> outSel[i],0); 
+	    }
+	HIS_GPIO_SetCfg(pDev->swRset,0);//
+	HIS_GPIO_Set(pDev-> swRset,1);
+        usleep(10000);
+        HIS_GPIO_Set(pDev-> swRset,0);
+            usleep(10000);
+        HIS_GPIO_Set(pDev-> swRset,1);
+	//WV_CHECK_RET( HIS_SSP_Open(&pDev-> sspHndl,1)  );
+	for(i=0;i<5;i++)
+	{
+		EXT_VGA_SetSwConf(vgaOutMap[i].r,vgaInMap[i].r,1,pDev->sw);
+		EXT_VGA_SetSwConf(vgaOutMap[i].g,vgaInMap[i].g,1,pDev->sw);
+		EXT_VGA_SetSwConf(vgaOutMap[i].b,vgaInMap[i].b,1,pDev->sw);
+		pDev->sw[16+i] = i;
+	}
+//	 for(i=0;i<15;i++)
+   //{
+   //    WV_printf("vga SW reg  %d  = %#x\r\n",i,pDev->sw[i]);
+	//}
+    
+	  EXT_FPGA_SetADV3226(pDev->sw,30);//	
+           
+ return WV_SOK;	
+}
+
+/**********************************************************************************
+
+WV_S32 EXT_VGA_DevDeInit(EXT_VGA_DEV_E * pDev );
+
+**********************************************************************************/
+WV_S32 EXT_VGA_DevDeInit(EXT_VGA_DEV_E * pDev )
+{ 
+     WV_CHECK_RET( HIS_IIC_Close  ( &pDev-> iicHndl) ); 
+   // WV_CHECK_RET( HIS_SSP_Close(&pDev-> sspHndl)  );	
+ 
+     return WV_SOK;	
+}
+
+
+
+/****************************************
+
+WV_S32  EXT_VGA_SetSw(WV_U8  outChn, WV_U8  inChn, WV_U8 ena );
+
+****************************************/
+
+WV_S32  EXT_VGA_SetSw(WV_U8  outChn, WV_U8  inChn, WV_U8 ena )
+{
+                EXT_VGA_SetSwConf(vgaOutMap[outChn].r,vgaInMap[inChn].r,ena,gVgaDev.sw);
+		EXT_VGA_SetSwConf(vgaOutMap[outChn].g,vgaInMap[inChn].g,ena,gVgaDev.sw);
+		EXT_VGA_SetSwConf(vgaOutMap[outChn].b,vgaInMap[inChn].b,ena,gVgaDev.sw); 
+		
+		gVgaDev.sw[16+outChn] = inChn;
+		
+ 	    //EXT_VGA_UpdateSw(&gVgaDev);
+ 	    
+ 	    EXT_FPGA_SetADV3226(gVgaDev.sw,30);//
+  return WV_SOK;
+}
+
+
+/****************************************************************************
+
+WV_S32 EXT_VGA_CMDGet(WV_S32 argc, WV_S8 **argv,WV_S8 *prfBuff)
+
+****************************************************************************/
+WV_S32 EXT_VGA_CMDGet(WV_S32 argc, WV_S8 **argv, WV_S8 * prfBuff)
+{
+	   WV_S32 i;  
+	if(argc<1) 
+		{
+		prfBuff += sprintf(prfBuff,"vga get <sw>\r\n");
+		return WV_SOK;
+		}
+    if(strcmp(argv[0],"sw") ==0)
+	{
+	   prfBuff += sprintf(prfBuff,"VGA SW config:\r\n");
+	    for(i=0;i<20;i++)
+	    {
+	       prfBuff += sprintf(prfBuff,"%d  : %#x\r\n",i,gVgaDev.sw[i]); 
+	    }
+	   
+	   return WV_SOK;
+	}
+  return WV_SOK;
+}
+
+
+/****************************************************************************
+
+WV_S32 EXT_VGA_CMDSet(WV_S32 argc, WV_S8 **argv,WV_S8 *prfBuff)
+
+****************************************************************************/
+WV_S32 EXT_VGA_CMDSet(WV_S32 argc, WV_S8 **argv, WV_S8 * prfBuff)
+{
+ 
+   
+	if(argc<1) 
+		{
+		prfBuff += sprintf(prfBuff,"vga set  <sw> \r\n");
+		return WV_SOK;
+		}
+   if(strcmp(argv[0],"sw") ==0)
+	{
+		if(argc < 4)
+		{ 
+			prfBuff += sprintf(prfBuff,"set vga  sw  <outChn> <inChn> <ena>\r\n");  
+			return WV_SOK; 
+		}
+		WV_U32   inChn,outChn,ena;
+		WV_STR_S2v(argv[1],&outChn);
+	    WV_STR_S2v(argv[2],&inChn);	 
+		WV_STR_S2v(argv[3],&ena); 
+		EXT_VGA_SetSw(outChn,inChn,ena ); 
+		return WV_SOK;  
+	} 
+    
+	prfBuff += sprintf(prfBuff,"no the cmd!!!!!!\r\n"); 
+	        
+	return WV_SOK;
+ 	
+}
+
+
+/****************************************
+
+WV_S32  EXT_VGA_Init();
+
+****************************************/
+WV_S32  EXT_VGA_Init()
+{
+    WV_S32 i;
+    gVgaDev.iicBus  = 0;
+    gVgaDev.iicAddr  = 0x98;
+   //
+   WV_CMD_Register("vga","get","get vga info",EXT_VGA_CMDGet);
+   WV_CMD_Register("vga","set","set vga ",EXT_VGA_CMDSet); 
+    for(i = 0;i<4;i++){
+    	 gVgaDev.inSel[i].bank = 10;
+    	 gVgaDev.inSel[i].num  = 0 + i*2;
+    	 
+    	 gVgaDev.edidSel[i].bank = 10;
+    	 gVgaDev.edidSel[i].num  = 1 + i*2; 
+    	 
+    	 gVgaDev.edidSel[i].bank = 14;
+    	 gVgaDev.edidSel[i].num  = 4 + i; 
+    	
+    	}
+     gVgaDev.swRset.bank = 5;
+     gVgaDev.swRset.num  = 7;
+     
+     EXT_VGA_DevInit(&gVgaDev ); 
+     
+     
+	return WV_SOK;
+}
+
+
+
+/****************************************
+
+WV_S32  EXT_VGA_DeInit();
+
+****************************************/
+WV_S32  EXT_VGA_DeInit()
+{
+	 EXT_VGA_DevDeInit( &gVgaDev);
+	return WV_SOK;
+}
+
+
+
+
+  

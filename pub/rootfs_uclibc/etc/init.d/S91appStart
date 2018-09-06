@@ -1,0 +1,8 @@
+#!/bin/sh
+if [ -e /opt/commom/appstart.sh ]; then
+	cd /opt/commom
+	./appstart.sh
+else
+  echo "appstart.sh not exist."
+fi	
+

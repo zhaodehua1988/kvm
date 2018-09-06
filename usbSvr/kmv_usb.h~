@@ -1,0 +1,46 @@
+#ifndef _KMV_USB_H_H_
+#define _KMV_USB_H_H_
+
+
+#include <stdio.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <linux/input.h>
+#include <unistd.h>
+#include <pthread.h>
+#include <string.h>
+
+#define KMV_USB_DEBUG_MODE
+
+#ifdef  KMV_USB_DEBUG_MODE
+#define KMV_USB_printf(...) \
+  				 do {\
+  				  printf("\n\rUSB:" __VA_ARGS__);\
+  				  fflush(stdout); \
+  				  } while(0)
+#else 
+  #define KMV_USB_printf(...) 
+#endif
+
+#define KMV_USB_DEVICE_DATAMAX_LEN 20
+
+typedef struct KMV_USB_DEVICE_INFO{
+	int name;//1:Keyboard 2:mouse -1:no dev
+	char chn;
+	char  physDev[KMV_USB_DEVICE_DATAMAX_LEN];
+	char handler[KMV_USB_DEVICE_DATAMAX_LEN];
+	unsigned char keyState[121];
+	unsigned char specialKey;
+
+}KMV_USB_DEVICE_INFO;
+
+int KMV_MOUSE_Proc(KMV_USB_DEVICE_INFO *pInfo);
+int KMV_KEYBD_Proc(KMV_USB_DEVICE_INFO *pInfo);
+
+int KMV_USB_DEV_Open();
+int KMV_USB_DEV_Close();
+
+#endif
+
+

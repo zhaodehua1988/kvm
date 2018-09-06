@@ -1,0 +1,54 @@
+#include"tsk_venc_conf.h"
+
+/*******************************************************************
+
+WV_S32  WV_S32 TSK_VENC_RegisterConf(WV_S32 chn);
+
+*******************************************************************/
+WV_S32  WV_S32 TSK_VENC_RegisterConf(WV_S32 chn)
+[
+	WV_S8  name[WV_CONF_NAME_MAX_LEN],value[WV_CONF_VALUE_MAX_LEN]; 
+	
+	sprintf(name,"Venc_%d_conf",chn); 
+	SYS_ENV_Register(0,name,NULL,NULL);
+	//
+	sprintf(name,"Venc_%d_viDev",chn); 
+	sprintf(value, "%d",chn);
+    SYS_ENV_Register(1 ,name,value,"viDev num");
+    //
+   	sprintf(name,"Venc_%d_viChn",chn); 
+	sprintf(value, "%d",chn*8);
+    SYS_ENV_Register(1 ,name,value,"viChn num");
+       //
+   	sprintf(name,"Venc_%d_viMode",chn); 
+	sprintf(value, "%d",0); 
+    SYS_ENV_Register(1 ,name,value,"vi clk mode");
+    //
+   	sprintf(name,"Venc_%d_vpss",chn); 
+	sprintf(value, "%d",chn); 
+    SYS_ENV_Register(1 ,name,value,"vi cpssGrp");
+    
+        //
+   	sprintf(name,"Venc_%d_vEnc",chn); 
+	sprintf(value, "%d",chn); 
+    SYS_ENV_Register(1 ,name,value,"venc chn");
+    
+    
+        //
+   	sprintf(name,"Venc_%d_bRate",chn); 
+	sprintf(value, "%d",4000); 
+    SYS_ENV_Register(1 ,name,value,"venc bitRate [Kbps]"); 
+           //
+   	sprintf(name,"Venc_%d_ip",chn); 
+	sprintf(value, "223.100.100.%d",chn); 
+    SYS_ENV_Register(1 ,name,value,"venc send ip addr"); 
+           //
+   	sprintf(name,"Venc_%d_port",chn); 
+	sprintf(value, "%d",7001); 
+    SYS_ENV_Register(1 ,name,value,"venc send ip port");     
+              //
+   	sprintf(name,"Venc_%d_pid",chn); 
+	sprintf(value, "%d",10+chn); 
+    SYS_ENV_Register(1 ,name,value,"video pid");   
+       
+}

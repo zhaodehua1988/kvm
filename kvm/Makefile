@@ -1,0 +1,72 @@
+##############################################################################################
+####
+############################################################################################## 
+CC := arm-hisiv300-linux-gcc
+
+WORK_PATH := ../
+SUBDIR   := common sys his task stream ext usbSvr
+
+##############################################################################################
+SOFT_VENDOR  := "WV"
+SOFT_TYPE    := "10"
+SOFT_VER     := "1.0.0.0"
+SOFT_NAME    := "KVM"
+SOFT_NUM     := "1"
+
+##############################################################################################
+COMM_SRC := $(foreach n, $(SUBDIR), $(wildcard $(WORK_PATH)$(n)/*.c))
+COMM_OBJ := $(COMM_SRC:%.c=%.o)
+ 
+##############################################################################################
+INC_DIR   := $(foreach n, $(SUBDIR), -I$(WORK_PATH)$(n))
+INCLUDE   := -I$(WORK_PATH)include -I ./ $(INC_DIR) 
+
+INC_PATH := ../
+
+DEFINES := -Dhi3531a -DHICHIP=0x3531a100 -DHI_RELEASE -DHI_XXXX -lpthread  -lm -ldl 
+DEFINES += -mcpu=cortex-a9 -mfloat-abi=softfp -mfpu=neon -mno-unaligned-access -fno-aggressive-loop-optimizations 
+
+
+CFLAGS := -Wall -g  -I$(INC_PATH) $(INCLUDE) $(DEFINES)  
+##############################################################################################
+REL_LIB := ../lib
+AUDIO_LIBA := $(REL_LIB)/libVoiceEngine.a $(REL_LIB)/libupvqe.a  $(REL_LIB)/libdnvqe.a 
+MPI_LIBA := $(REL_LIB)/libmpi.a  $(REL_LIB)/libhdmi.a  $(REL_LIB)/libjpeg.a
+LDFLAGS := -Wl,--start-group $(MPI_LIBA) $(AUDIO_LIBA)  -Wl,--end-group
+##############################################################################################
+# target source
+SRC  := $(wildcard *.c) 
+OBJ  := $(SRC:%.c=%.o)
+TARGET := $(OBJ:%.o=%) 
+##############################################################################################
+%.o:%.h
+
+.PHONY : clean all test ver
+
+all: ver $(TARGET) 
+
+$(TARGET):%:%.o $(COMM_OBJ)
+	$(CC) $(CFLAGS) -lpthread -lm -o $@ $^ $(LDFLAGS) 
+
+ver:
+	@echo "generate date and ver"
+	@echo '#ifndef _WV_COMMOM_VERSION_H_'       >../common/wv_ver.h
+	@echo '#define _WV_COMMOM_VERSION_H_'       >> ../common/wv_ver.h 
+	@date +'#define SOFTVER_DATE     "%Y:%m:%d"'    >> ../common/wv_ver.h
+	@date +'#define SOFTVER_TIME     "%T"'          >> ../common/wv_ver.h
+	@echo  '#define SOFTVER_MAIN     $(SOFT_VER)'    >> ../common/wv_ver.h
+	@echo  '#define SOFTVER_NAME     $(SOFT_NAME)'  >> ../common/wv_ver.h
+	@echo  '#define SOFTVER_NUM      $(SOFT_NUM)'   >> ../common/wv_ver.h
+	@echo  '#define SOFTVER_VENDOR   $(SOFT_VENDOR)'   >> ../common/wv_ver.h
+	@echo  '#define SOFTVER_TYPE     $(SOFT_TYPE)'   >> ../common/wv_ver.h
+	@echo  '#endif'  >> ../common/wv_ver.h 
+test:
+	@echo $(COMM_SRC)
+	@echo $(INC_DIR)
+	@echo $(CFLAGS)
+	@echo $(LDFLAGS)
+	@echo $(CC)
+clean:
+	@rm -f $(TARGET)
+	@rm -f $(OBJ)
+	@rm -f $(COMM_OBJ) 

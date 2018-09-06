@@ -1,0 +1,226 @@
+#include "his_venc.h"
+#include "his_sys.h"
+#include "hi_comm_venc.h"
+#include "mpi_venc.h"
+/******************************************************************************
+
+WV_S32  HIS_VENC_Init(WV_S32  vencChn, WV_S32 rcMode,WV_S32 Profile,WV_U32  width,WV_U32  height,WV_U32  srcFrmRate ,WV_U32  dstFrmRate ,WV_U32  bitRate );
+
+******************************************************************************/
+WV_S32  HIS_VENC_Init(WV_S32  vencChn, WV_S32 rcMode,WV_S32 Profile,WV_U32  width,WV_U32  height,WV_U32  srcFrmRate ,WV_U32  dstFrmRate,WV_U32  bitRate )
+{
+    HI_S32 s32Ret;
+    VENC_CHN_ATTR_S stVencChnAttr;
+    VENC_ATTR_H264_S stH264Attr;
+    VENC_ATTR_H264_CBR_S    stH264Cbr;
+    VENC_ATTR_H264_VBR_S    stH264Vbr;
+    VENC_ATTR_H264_FIXQP_S  stH264FixQp;
+    SIZE_S stPicSize;
+
+    stPicSize.u32Width = width;
+    stPicSize.u32Height= height;
+
+   //    step 1:  Create Venc Channel
+    
+            stVencChnAttr.stVeAttr.enType = PT_H264;
+    
+            stH264Attr.u32MaxPicWidth  = HIS_SYS_MAX_PICWIDTH;//stPicSize.u32Width;
+            stH264Attr.u32MaxPicHeight = HIS_SYS_MAX_PICHEIGH;//stPicSize.u32Height;
+            stH264Attr.u32PicWidth     = stPicSize.u32Width;/*the picture width*/
+            stH264Attr.u32PicHeight    = stPicSize.u32Height;/*the picture height*/
+            stH264Attr.u32BufSize      = HIS_SYS_MAX_PICWIDTH * HIS_SYS_MAX_PICHEIGH * 2;/*stream buffer size*/
+            stH264Attr.u32Profile      = Profile;/*0: baseline; 1:MP; 2:HP 3:svc-t */
+            stH264Attr.bByFrame        = HI_TRUE;/*get stream mode is slice mode or frame mode?*/
+            memcpy(&stVencChnAttr.stVeAttr.stAttrH264e, &stH264Attr, sizeof(VENC_ATTR_H264_S));
+
+            if(0 == rcMode)
+            {
+                stVencChnAttr.stRcAttr.enRcMode = VENC_RC_MODE_H264CBR;
+                stH264Cbr.u32Gop            =  dstFrmRate;
+                stH264Cbr.u32StatTime       =  1; /* stream rate statics time(s) */
+                stH264Cbr.u32SrcFrmRate     =   srcFrmRate;/* input (vi) frame rate */
+                stH264Cbr.fr32DstFrmRate    =   dstFrmRate;/* target frame rate */  
+                stH264Cbr.u32BitRate        =   bitRate; 
+                stH264Cbr.u32FluctuateLevel =   0; /* average bit rate */
+                memcpy(&stVencChnAttr.stRcAttr.stAttrH264Cbr, &stH264Cbr, sizeof(VENC_ATTR_H264_CBR_S));
+            }
+            else if (1 == rcMode) 
+            {
+                stVencChnAttr.stRcAttr.enRcMode = VENC_RC_MODE_H264FIXQP;
+                stH264FixQp.u32Gop = dstFrmRate;
+                stH264FixQp.u32SrcFrmRate = srcFrmRate;
+                stH264FixQp.fr32DstFrmRate = dstFrmRate;
+                stH264FixQp.u32IQp = 20;
+                stH264FixQp.u32PQp = 23;
+                memcpy(&stVencChnAttr.stRcAttr.stAttrH264FixQp, &stH264FixQp,sizeof(VENC_ATTR_H264_FIXQP_S));
+            }
+            else if (2 == rcMode) 
+            {
+                stVencChnAttr.stRcAttr.enRcMode = VENC_RC_MODE_H264VBR;
+                stH264Vbr.u32Gop = dstFrmRate;
+                stH264Vbr.u32StatTime = 1;
+                stH264Vbr.u32SrcFrmRate = srcFrmRate;
+                stH264Vbr.fr32DstFrmRate = dstFrmRate;
+                stH264Vbr.u32MinQp = 10;
+                stH264Vbr.u32MaxQp = 40;
+                 stH264Vbr.u32MaxBitRate = bitRate;
+                   
+                memcpy(&stVencChnAttr.stRcAttr.stAttrH264Vbr, &stH264Vbr, sizeof(VENC_ATTR_H264_VBR_S));
+            }
+            else
+            {
+                return HI_FAILURE;
+            }
+       
+    s32Ret = HI_MPI_VENC_CreateChn(vencChn, &stVencChnAttr);
+    if (HI_SUCCESS != s32Ret)
+    {
+        WV_ERROR("HI_MPI_VENC_CreateChn [%d] faild with %#x!\n",vencChn, s32Ret);
+        return s32Ret;
+    }
+
+   
+  //   step 2:  Start Recv Venc Pictures 
+    s32Ret = HI_MPI_VENC_StartRecvPic(vencChn);
+    if (HI_SUCCESS != s32Ret)
+    {
+        WV_ERROR("HI_MPI_VENC_StartRecvPic faild with%#x!\n", s32Ret);
+        return HI_FAILURE;
+    }
+
+    return WV_SOK;
+
+}
+
+
+
+/******************************************************************************
+
+WV_S32  HIS_VENC_DeInit(WV_S32  vencChn); 
+
+******************************************************************************/
+WV_S32  HIS_VENC_DeInit(WV_S32  vencChn)
+{
+
+HI_S32 s32Ret;
+
+   //  step 1:  Stop Recv Pictures
+    
+    s32Ret = HI_MPI_VENC_StopRecvPic(vencChn);
+    if (HI_SUCCESS != s32Ret)
+    {
+       WV_ERROR("HI_MPI_VENC_StopRecvPic vechn[%d] failed with %#x!\n",vencChn, s32Ret);
+       return HI_FAILURE;
+    }
+
+    //step 2:  Distroy Venc Channel 
+    s32Ret = HI_MPI_VENC_DestroyChn(vencChn);
+    if (HI_SUCCESS != s32Ret)
+    {
+       WV_ERROR("HI_MPI_VENC_DestroyChn vechn[%d] failed with %#x!\n",vencChn, s32Ret);
+        return HI_FAILURE;
+    }
+	return WV_SOK;
+}
+
+/********************************************************************************************
+
+WV_S32  HIS_VENC_SetResolution(WV_S32  vencChn, WV_U8  *pBuf, WV_U32 *len, WV_U64 * ptsUs);
+
+********************************************************************************************/
+WV_S32  HIS_VENC_SetResolution(WV_S32  vencChn,WV_U32 width,WV_U32  height ,WV_U32  srcFrmRate ,WV_U32  dstFrmRate,WV_U32  bitRate )
+{
+    VENC_CHN_ATTR_S stVencChnAttr;
+    WV_S32 s32Ret;
+      
+   s32Ret = HI_MPI_VENC_GetChnAttr(vencChn,&stVencChnAttr);
+    if (HI_SUCCESS != s32Ret)
+    {
+       WV_ERROR("HI_MPI_VENC_GetChnAttr vechn[%d] failed with %#x!\n",vencChn, s32Ret);
+        return HI_FAILURE;
+    }
+    
+   stVencChnAttr.stVeAttr.stAttrH264e.u32PicWidth     = width;
+   stVencChnAttr.stVeAttr.stAttrH264e.u32PicHeight    = height; 
+   if(  stVencChnAttr.stRcAttr.enRcMode == VENC_RC_MODE_H264CBR)
+   {
+      stVencChnAttr.stRcAttr.stAttrH264Cbr.u32Gop            =   dstFrmRate;   
+      stVencChnAttr.stRcAttr.stAttrH264Cbr.u32SrcFrmRate     =   srcFrmRate;/* input (vi) frame rate */
+      stVencChnAttr.stRcAttr.stAttrH264Cbr.fr32DstFrmRate    =   dstFrmRate;/* target frame rate */  
+      stVencChnAttr.stRcAttr.stAttrH264Cbr.u32BitRate        =   bitRate; 
+   }
+    if(  stVencChnAttr.stRcAttr.enRcMode == VENC_RC_MODE_H264FIXQP)
+   {
+    	stVencChnAttr.stRcAttr.stAttrH264FixQp.u32Gop = dstFrmRate;
+    	stVencChnAttr.stRcAttr.stAttrH264FixQp.u32SrcFrmRate = srcFrmRate;
+    	stVencChnAttr.stRcAttr.stAttrH264FixQp.fr32DstFrmRate = dstFrmRate; 
+    }
+  if(  stVencChnAttr.stRcAttr.enRcMode == VENC_RC_MODE_H264VBR)
+   {
+    	stVencChnAttr.stRcAttr.stAttrH264Vbr.u32Gop = dstFrmRate;
+    	stVencChnAttr.stRcAttr.stAttrH264Vbr.u32SrcFrmRate = srcFrmRate;
+    	stVencChnAttr.stRcAttr.stAttrH264Vbr.fr32DstFrmRate = dstFrmRate; 
+    	stVencChnAttr.stRcAttr.stAttrH264Vbr.u32MaxBitRate =  bitRate;
+    }
+  s32Ret = HI_MPI_VENC_SetChnAttr(vencChn,&stVencChnAttr);
+    if (HI_SUCCESS != s32Ret)
+    {
+       WV_ERROR("HI_MPI_VENC_GetChnAttr vechn[%d] failed with %#x!\n",vencChn, s32Ret);
+        return HI_FAILURE;
+    }  
+    
+ 	return WV_SOK;
+}
+
+/********************************************************************************************
+
+WV_S32  HIS_VENC_GetStream(WV_S32  vencChn, WV_U8  *pBuf, WV_U32 *len, WV_U64 * ptsUs);
+
+********************************************************************************************/
+WV_S32  HIS_VENC_GetStream(WV_S32  vencChn, WV_U8  *pBuf, WV_U32 *len, WV_U64 * ptsUs) 
+{
+    HI_S32  ret = 0,i;
+    VENC_STREAM_S encStream;
+    WV_U32 bufLen,esLen;
+	WV_U8  *pEsPack;
+	VENC_CHN_STAT_S stStat;
+    VENC_PACK_S  encPack[100];
+    encStream.pstPack = encPack;
+    
+    ret = HI_MPI_VENC_Query(vencChn, &stStat); 
+    if (ret != 0)
+		 {
+		 return WV_EFAIL; 
+		 }
+    
+		if(0 == stStat.u32CurPacks)
+		{
+		  return WV_EFAIL; 
+			 
+		}
+    encStream.u32PackCount = stStat.u32CurPacks;
+    ret = HI_MPI_VENC_GetStream(vencChn, &encStream,1000*100); 
+	 if (ret != 0)
+		 {
+		    return ret; 
+		 }
+    // WV_printf(" WENC[%d] get stream \r\n",vencChn);
+	bufLen = 0;
+	for(i = 0;i< encStream.u32PackCount ;i++)
+		{
+		 esLen = encStream.pstPack[i].u32Len - encStream.pstPack[i].u32Offset;
+		 pEsPack= encStream.pstPack[i].pu8Addr + encStream.pstPack[i].u32Offset;
+		 memcpy(pBuf+bufLen,pEsPack,esLen);
+		 bufLen +=  esLen; 
+		 *ptsUs =  encStream.pstPack[i].u64PTS;
+		}
+	*len = bufLen;	 
+	 ret = HI_MPI_VENC_ReleaseStream(vencChn, &encStream);		 
+	 if(ret != 0)
+	 {
+	    WV_ERROR("ReleaseStream [%d] failed with %#x!\n",vencChn, ret);
+	    return ret;  
+	 } 
+   return  WV_SOK;	 
+}
+

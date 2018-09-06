@@ -1,0 +1,278 @@
+#include "his_vi.h"
+#include "hi_comm_vi.h"
+#include "mpi_vi.h"
+
+
+VI_DEV_ATTR_S DEV_ATTR_BT1120_STANDARD_BASE =
+/* 典型时序3:7441 BT1120 1080P@60fps典型时序 (对接时序: 时序)*/
+{
+    /*接口模式*/
+    VI_MODE_BT1120_STANDARD,
+    /*1、2、4路工作模式*/
+    VI_WORK_MODE_1Multiplex,
+    /* r_mask    g_mask    b_mask*/// {0xFF000000,    0xFF0000},
+   {0xFF0000,    0xFF000000},
+    /*逐行or隔行输入*/
+    //VI_SCAN_PROGRESSIVE,
+
+	/* 双沿输入时必须设置 */
+	VI_CLK_EDGE_SINGLE_UP,
+	
+    /*AdChnId*/
+    {-1, -1, -1, -1},
+    /*enDataSeq, 仅支持YUV格式*/
+    VI_INPUT_DATA_UVUV,
+
+    /*同步信息，对应reg手册的如下配置, --bt1120时序无效*/
+    {
+    /*port_vsync   port_vsync_neg     port_hsync        port_hsync_neg        */
+    VI_VSYNC_PULSE, VI_VSYNC_NEG_HIGH, VI_HSYNC_VALID_SINGNAL,VI_HSYNC_NEG_HIGH,VI_VSYNC_NORM_PULSE,VI_VSYNC_VALID_NEG_HIGH,
+
+    /*timing信息，对应reg手册的如下配置*/
+    /*hsync_hfb    hsync_act    hsync_hhb*/
+    {0,            2560,        0,
+    /*vsync0_vhb vsync0_act vsync0_hhb*/
+     0,            1600,        0,
+    /*vsync1_vhb vsync1_act vsync1_hhb*/
+     0,            0,            0}
+    },
+    /*使用内部ISP*/
+    VI_PATH_BYPASS,
+    /*输入数据类型*/
+    VI_DATA_TYPE_YUV
+
+};
+
+
+/***************************************************************************
+
+WV_S32  HIS_VI_Init(WV_S32  viDev, WV_S32 modeClk, WV_U32  width,WV_U32  height );
+
+***************************************************************************/
+WV_S32  HIS_VI_Init(WV_S32  viDev,WV_S32 modeClk,WV_U32  width,WV_U32  height )
+{
+
+ WV_S32 s32Ret;   
+   
+//star dev  
+	VI_DEV_ATTR_S stViDevAttr; 
+	memcpy(&stViDevAttr,&DEV_ATTR_BT1120_STANDARD_BASE,sizeof(stViDevAttr));
+	
+	//single-edge mode and in rising edge
+	stViDevAttr.enClkEdge  =  VI_CLK_EDGE_SINGLE_UP;  
+	
+	if(modeClk == 1 )//single-edge mode and in falling edge
+		{
+		stViDevAttr.enClkEdge  =  VI_CLK_EDGE_SINGLE_DOWN;       
+		} 
+	if(modeClk == 2) //Double edge mode
+		{
+		stViDevAttr.enClkEdge  =  VI_CLK_EDGE_DOUBLE;       
+		}
+    stViDevAttr.enDataSeq = VI_INPUT_DATA_UYVY;//  
+    s32Ret = HI_MPI_VI_SetDevAttr(viDev, &stViDevAttr);
+    if (s32Ret != HI_SUCCESS)
+    {
+        WV_ERROR (" dev[%d]  HI_MPI_VI_SetDevAttr failed with %#x!\n", viDev,s32Ret);
+        return HI_FAILURE;
+    }
+
+    s32Ret = HI_MPI_VI_EnableDev(viDev);
+    if (s32Ret != HI_SUCCESS)
+    {
+        WV_ERROR (" dev[%d]  HI_MPI_VI_EnableDev failed with %#x!\n",viDev, s32Ret);
+        return HI_FAILURE;
+    }
+//satr chn
+	VI_CHN ViChn;
+	VI_CHN_ATTR_S stChnAttr;
+ 
+	stChnAttr.stCapRect.s32X = 0;
+	stChnAttr.stCapRect.s32Y = 0;
+	stChnAttr.stCapRect.u32Width  = width;
+	stChnAttr.stCapRect.u32Height = height;	
+	stChnAttr.stDestSize.u32Width = width;
+    stChnAttr.stDestSize.u32Height= height;
+    
+    stChnAttr.enScanMode = VI_SCAN_PROGRESSIVE;
+    stChnAttr.enCapSel = VI_CAPSEL_BOTH;
+    stChnAttr.enPixFormat = PIXEL_FORMAT_YUV_SEMIPLANAR_420;   /* sp420 or sp422 */
+    stChnAttr.bMirror = HI_FALSE;
+    stChnAttr.bFlip = HI_FALSE;
+    stChnAttr.s32SrcFrameRate = -1;
+    stChnAttr.s32DstFrameRate = -1;
+	
+	ViChn =  viDev*4;
+   s32Ret = HI_MPI_VI_SetChnAttr(ViChn, &stChnAttr);
+    if (s32Ret != HI_SUCCESS)
+    {
+       WV_ERROR (" chn[%d]failed with %#x!\n",ViChn, s32Ret);
+        return HI_FAILURE;
+    }
+    
+    s32Ret = HI_MPI_VI_EnableChn(ViChn);
+    if (s32Ret != HI_SUCCESS)
+    {
+       WV_ERROR (" chn[%d failed with %#x!\n",ViChn, s32Ret);
+        return HI_FAILURE;
+    }
+
+   return WV_SOK;
+	
+}
+
+
+
+/***************************************************************************
+
+WV_S32  HIS_VI_DeInit(WV_S32  viDev);
+
+***************************************************************************/
+WV_S32  HIS_VI_DeInit(WV_S32  viDev)
+{
+	VI_CHN ViChn;
+
+	WV_S32 s32Ret; 
+
+	/* Stop vi phy-chn */
+	ViChn = viDev * 4;
+	s32Ret = HI_MPI_VI_DisableChn(ViChn);
+	if (HI_SUCCESS != s32Ret)
+		{
+		WV_ERROR (" VI StopChn[%d] failed with %#x\n",ViChn,s32Ret);
+		return HI_FAILURE;
+		}
+
+	/*** Stop VI Dev ***/
+
+
+	s32Ret = HI_MPI_VI_DisableDev(viDev);
+	if (HI_SUCCESS != s32Ret)
+		{
+		WV_ERROR ("VI_StopDev[%d] failed with %#x\n",viDev,s32Ret);
+		return HI_FAILURE;
+		}
+    return WV_SOK;    
+    }
+    
+/***************************************************************************
+
+WV_S32  HIS_VI_GetResolution(WV_S32  viChn,WV_U32 *pWidth,WV_U32  *pHeight,WV_U32 *pFreamRate);
+
+***************************************************************************/
+WV_S32  HIS_VI_GetResolution(WV_S32  viChn,WV_U32 *pWidth,WV_U32  *pHeight,WV_U32 *pFreamRate)
+{
+  VI_CHN_STAT_S   viStat;
+  WV_S32  s32Ret = HI_MPI_VI_Query(viChn,&viStat);
+   if(s32Ret != WV_SOK)
+    {
+		  WV_ERROR("VI_Query[%d] failed with %#x\n",viChn,s32Ret);
+		  return WV_EFAIL;
+    }
+   if(viStat.bEnable != HI_TRUE) 
+   {
+    	return WV_EFAIL;
+   }
+   
+  *pWidth      =  viStat.u32PicWidth;
+  *pHeight     =  viStat.u32PicHeight;
+  *pFreamRate  =  viStat.u32FrmRate;
+      
+  return  WV_SOK;
+}
+
+/***************************************************************************
+
+WV_S32  HIS_VI_SetResolution(WV_S32  viDev,WV_U32 Width,WV_U32  Height);
+
+***************************************************************************/
+WV_S32  HIS_VI_SetResolution(WV_S32  viChn,WV_S32  viDev,WV_U32 width,WV_U32  height,WV_U32 mode)
+{
+   WV_S32   s32Ret;
+
+
+//star dev  
+	VI_DEV_ATTR_S stViDevAttr; 
+	memcpy(&stViDevAttr,&DEV_ATTR_BT1120_STANDARD_BASE,sizeof(stViDevAttr));
+
+	s32Ret = HI_MPI_VI_DisableChn(viChn); 
+	if (s32Ret != HI_SUCCESS)
+	{
+		WV_ERROR (" DisableChn[%d]failed with %#x!\n",viChn, s32Ret);
+		return HI_FAILURE;
+	}
+	s32Ret = HI_MPI_VI_DisableDev(viDev);
+	  if (s32Ret != HI_SUCCESS)
+    {
+        WV_ERROR (" dev[%d]  HI_MPI_VI_DisEnableDev failed with %#x!\n", viDev,s32Ret);
+        return HI_FAILURE;
+    }
+
+	//single-edge mode and in rising edge
+	if(mode == 0)
+	{
+		stViDevAttr.enClkEdge  =  VI_CLK_EDGE_SINGLE_UP;  
+		printf("*******set single up **********\n");
+	}
+	if(mode == 1 )//single-edge mode and in falling edge
+	{
+		stViDevAttr.enClkEdge  =  VI_CLK_EDGE_SINGLE_DOWN;       
+	} 
+	if(mode == 2) //Double edge mode
+	{
+		stViDevAttr.enClkEdge  =  VI_CLK_EDGE_DOUBLE;
+		printf("*******set single double **********\n");       
+	}
+    stViDevAttr.enDataSeq = VI_INPUT_DATA_UYVY;//  
+    s32Ret = HI_MPI_VI_SetDevAttr(viDev, &stViDevAttr);
+    if (s32Ret != HI_SUCCESS)
+    {
+        WV_ERROR (" dev[%d]  HI_MPI_VI_SetDevAttr failed with %#x!\n", viDev,s32Ret);
+        return HI_FAILURE;
+    }
+
+    s32Ret = HI_MPI_VI_EnableDev(viDev);
+    if (s32Ret != HI_SUCCESS)
+    {
+        WV_ERROR (" dev[%d]  HI_MPI_VI_EnableDev failed with %#x!\n",viDev, s32Ret);
+        return HI_FAILURE;
+    }
+	//start chn
+  VI_CHN_ATTR_S stChnAttr; 
+   s32Ret = HI_MPI_VI_GetChnAttr(viChn, &stChnAttr);
+    if (s32Ret != HI_SUCCESS)
+    {
+       WV_ERROR (" GetChnAttr[%d]failed with %#x!\n",viChn, s32Ret);
+        return HI_FAILURE;
+    }
+   //s32Ret = HI_MPI_VI_DisableChn(viChn); 
+ //  if (s32Ret != HI_SUCCESS)
+  //  {
+  //     WV_ERROR (" DisableChn[%d]failed with %#x!\n",viChn, s32Ret);
+  //      return HI_FAILURE;
+  //  }
+    stChnAttr.stCapRect.s32X = 0;
+	stChnAttr.stCapRect.s32Y = 0;
+	stChnAttr.stCapRect.u32Width  = width;
+	stChnAttr.stCapRect.u32Height = height;	
+	stChnAttr.stDestSize.u32Width = width;
+    stChnAttr.stDestSize.u32Height= height;
+    s32Ret = HI_MPI_VI_SetChnAttr(viChn, &stChnAttr);
+    if (s32Ret != HI_SUCCESS)
+    {
+       WV_ERROR (" chn[%d]failed with %#x!\n",viChn, s32Ret);
+        return HI_FAILURE;
+    }
+    
+    s32Ret = HI_MPI_VI_EnableChn(viChn);
+    if (s32Ret != HI_SUCCESS)
+    {
+       WV_ERROR (" chn[%d failed with %#x!\n",viChn, s32Ret);
+        return HI_FAILURE;
+    } 
+  return  WV_SOK;
+}
+
+
+
+
