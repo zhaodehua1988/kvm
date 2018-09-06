@@ -377,7 +377,7 @@ WV_S32 TSK_VENC_SetResolution(TSK_VENC_DEV_E  * pDev)
  WV_S32 ret=0;
  //pDev-> bitRates = pDev->encBitRate * 1.0* pDev->viHeight*pDev->viWidth*pDev->viFrameRate/pDev-> encFratio/1920/1080/30;
  pDev-> bitRates = 10000;
- //printf("set chn[%d] viWidth=%d,,viHeight=%d \n",pDev->viChn,pDev->viWidth,pDev->viHeight);
+ printf("set chn[%d] viWidth=%d,,viHeight=%d \n",pDev->viChn,pDev->viWidth,pDev->viHeight);
 ret |= HIS_VI_SetResolution(pDev->viChn,pDev->viDev,pDev->viWidth,pDev->viHeight,pDev->viClkMode);
 ret |= HIS_VENC_SetResolution(pDev->vencChn,pDev->viWidth,pDev->viHeight,pDev->viFrameRate,pDev->viFrameRate/pDev->encFratio,pDev->bitRates );
  return ret;

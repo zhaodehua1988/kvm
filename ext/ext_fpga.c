@@ -24,7 +24,7 @@ typedef struct EXT_FPGA_DEV_E
   //
   WV_U16           confFlag[4];
   WV_U16           uartChek[4];
-  WV_U16           uartBaud[4];
+  WV_U32           uartBaud[4];
   WV_U16           uartStop[4];
   // statute 
   WV_U32       		width[2]; 
@@ -166,15 +166,20 @@ WV_S32 EXT_FPGA_UartSet(EXT_FPGA_DEV_E *pDev,WV_U32 chn)
 WV_S32 EXT_FPGA_UartSet(EXT_FPGA_DEV_E *pDev,WV_U32 chn)
 {
     WV_U16   addr,data;
-     
+     WV_U32 dataRx,dataTx;
      if( pDev ->confFlag[chn] == 0)  return WV_SOK;
    
     addr = 0x30+ chn;//rx
-    
-    data = 100000000/pDev->uartBaud[chn];
-    EXT_FPGA_SpiWrite(pDev,addr,data/16);  
+    //dataRx = 100000000/pDev->uartBaud[chn];
+    //dataRx = 98000000/pDev->uartBaud[chn];
+	dataRx = 99417600/pDev->uartBaud[chn];
+	//dataRx = 99997400/pDev->uartBaud[chn];
+	dataTx = dataRx;	
+	dataRx = dataRx / 16;
+	printf("uart baud dataRx[%d] ,dataTx[%d]\n",dataRx,dataTx);
+    EXT_FPGA_SpiWrite(pDev,addr,dataRx);
      addr = 0x34+ chn;//tx
-    EXT_FPGA_SpiWrite(pDev,addr,data);  
+    EXT_FPGA_SpiWrite(pDev,addr,dataTx);  
     data =0;
     if(pDev->uartChek[chn] == 1)
     {
@@ -319,7 +324,11 @@ WV_S32 EXT_FPGA_SvrGet(EXT_FPGA_DEV_E *pDev,WV_U32 chn)
   
    empty = 0;
    i = 0;
-    addr = 0x11 +chn *4; 
+    addr = 0x11 +chn *4;
+//	if(chn == 0){
+		//printf("change addr 0x11 to 0x51 \n");
+//		addr = 0x80;	//change addr 0x11 to 0x51,(read 0xa5 == 0xa4)
+//	}
    while(empty==0)
    {
 	 
@@ -339,11 +348,19 @@ WV_S32 EXT_FPGA_SvrGet(EXT_FPGA_DEV_E *pDev,WV_U32 chn)
    {
      return  WV_SOK;
    }
-    
+ 
     WV_CHECK_RET( WV_QUE_Get(&(pDev->queFree),(WV_U32 *)(&pQue),0) );
    
    *((WV_U32 *)pQue) = i;
     memcpy(pQue + 4,buf,i);
+	/*	
+	WV_S32 j;
+	for(j=0;j<i;j++)
+	{
+		printf("%02x ",buf[j]);
+	}
+	printf("\n");	
+	*/
     WV_CHECK_RET( WV_QUE_Put(&(pDev->queSvrRx[chn]),(WV_U32)pQue,0) );
 	
    return WV_SOK;
@@ -367,7 +384,15 @@ WV_S32 EXT_FPGA_SvrRx(EXT_FPGA_DEV_E *pDev,WV_U32 chn ,WV_U8 *pBuf,WV_U32 *len)
 	}
    *len = *((WV_U32 *)pQue);
     memcpy(pBuf,pQue + 4,*len);
-    WV_CHECK_RET( WV_QUE_Put(&(pDev->queFree),(WV_U32)pQue,0) );
+	/*
+	WV_S32 i;
+	for(i=0;i<*len;i++)
+	{
+		printf("[%02x] ",pBuf[i]);
+	}
+	printf("\n");
+	 */   
+	WV_CHECK_RET( WV_QUE_Put(&(pDev->queFree),(WV_U32)pQue,0) );
    return WV_SOK;
 }
 
@@ -564,31 +589,24 @@ EXT_FPGA_DevClose(pDev);
 WV_S32 EXT_FPGA_SendUart(WV_U8  chn, WV_U8 *pBuf, WV_U32 len )
 
 ********************************************************************/
-
 WV_S32 EXT_FPGA_SendUart(WV_U8  chn, WV_U8 *pBuf, WV_U32 len )
 {
-  return  EXT_FPGA_SvrTx(&gFpgaDev,chn ,pBuf,len);
+ 	return  EXT_FPGA_SvrTx(&gFpgaDev,chn ,pBuf,len);
 }
-
-
-
 /********************************************************************
 
 WV_S32  EXT_FPGA_SendKB(WV_U8  chn, WV_U8 *pBuf, WV_U32 len )
 
 ********************************************************************/
-
 WV_S32  EXT_FPGA_SendKB(WV_U8  chn, WV_U8 *pBuf, WV_U32 len )
 {
   return  EXT_FPGA_KeyTx(&gFpgaDev,chn ,pBuf,len);
 }
-
 /********************************************************************
 
 WV_S32  EXT_FPGA_GetUart(WV_U8  chn, WV_U8 *pBuf, WV_U32 len )
 
 ********************************************************************/
-
 WV_S32  EXT_FPGA_GetUart(WV_U8  chn, WV_U8 *pBuf, WV_U32 *len )
 {
   return  EXT_FPGA_SvrRx(&gFpgaDev,chn ,pBuf,len);

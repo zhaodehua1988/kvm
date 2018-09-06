@@ -14,7 +14,7 @@
 #include "kmv_svr_udp.h"
 #include "tsk_sw.h"
 
-#define KMV_USB_DEBUG_MODE
+//#define KMV_USB_DEBUG_MODE
 
 #ifdef  KMV_USB_DEBUG_MODE
 #define KMV_USB_printf(...) \

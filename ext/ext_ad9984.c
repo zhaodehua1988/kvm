@@ -2,6 +2,7 @@
 #include"his_iic.h"
 #include"his_gpio.h"
 
+#define AD9984_FILE_PATH "./env/ad9984.dat"
 typedef struct EXT_VGA_FORMAT_S
 {
  WV_U16  total_line     ;
@@ -166,7 +167,67 @@ WV_S32 EXT_9984_AutoOffset(EXT_AD9984_DEV_E * pDev )
 	
 	return WV_SOK;
 }
+/**********************************************************************************
 
+WV_S32 EXT_9984_Conf_test(EXT_AD9984_DEV_E * pDev );
+
+**********************************************************************************/
+WV_S32 EXT_9984_Conf_test(EXT_AD9984_DEV_E * pDev )
+{	
+
+	WV_U8 buf[32];
+	WV_U8 temp[2];
+
+	FILE *fp;
+	WV_U32 addr,val,data;
+	//WV_U8 val,addr,data;	
+	WV_S32 i=0;
+	fp = fopen(AD9984_FILE_PATH,"rb");
+	if(fp == NULL)
+	{
+		printf("open ad9984 conf file error \n");
+		return 0;
+	}
+	
+	for(i=0;i<2;i++)
+	{
+		
+		if(fgets(buf,sizeof(buf),fp) == NULL)
+		{
+			fclose(fp);
+			return 0;
+		}	
+		if(buf[0] == ' ')
+		{
+			fclose(fp);
+			return -1;
+
+		}
+
+		temp[0]=buf[0];
+		temp[1]=buf[1];
+		
+		sscanf(temp,"%x",&addr);
+		//printf("addr=%02x[%d],[addr=%p][val=%p]\n",addr,addr,&addr,&val);
+		//addr = data;
+		if(buf[2] == ' ')
+		{
+			temp[0]=buf[3];
+			temp[1]=buf[4];
+			sscanf(temp,"%x",&val);
+			//val = data;		
+		}	
+		//printf("addr=%02x[%d]\n",addr,addr);
+		printf("*********ad9984,addr=%02x,val=%02x************\n",addr,val);
+		EXT_9984_IicWrite(pDev,addr,val);  
+	}
+
+	fclose(fp);
+  	//EXT_9984_IicWrite(pDev,0x1f,0x92);       //Output select1//解决部分vga输入板卡有抖动现象  // 0x93  0x92
+    //EXT_9984_IicWrite(pDev,0x20,0x45);       //Output select2  //phase 90// 调整相位 0x45 
+	
+	
+}
 /**********************************************************************************
 
 WV_S32 EXT_9984_Conf(EXT_AD9984_DEV_E * pDev );
@@ -211,7 +272,8 @@ WV_S32 EXT_9984_Conf(EXT_AD9984_DEV_E * pDev )
   EXT_9984_IicWrite(pDev,0x1e,0xa4);       //input and power
   //EXT_9984_IicWrite(pDev,0x1f,0x90);       //Output select1
   EXT_9984_IicWrite(pDev,0x1f,0x92);       //Output select1//解决部分vga输入板卡有抖动现象  // 0x93  0x92
-  EXT_9984_IicWrite(pDev,0x20,0x04);       //Output select2  //phase 90
+  //EXT_9984_IicWrite(pDev,0x20,0x04);       //Output select2  //phase 90
+  EXT_9984_IicWrite(pDev,0x20,0x45);       //Output select2  //phase 90// 调整相位 0x45 
   EXT_9984_IicWrite(pDev,0x21,0x20);       //
   EXT_9984_IicWrite(pDev,0x22,0x32);       //
   EXT_9984_IicWrite(pDev,0x23,0x0a);       //sync filter window
@@ -221,10 +283,11 @@ WV_S32 EXT_9984_Conf(EXT_AD9984_DEV_E * pDev )
   EXT_9984_IicWrite(pDev,0x2d,0xe8);       //
   EXT_9984_IicWrite(pDev,0x2e,0xe0);       //
   EXT_9984_IicWrite(pDev,0x3c,0x00);       //autogain hold enable
+
+  EXT_9984_Conf_test(pDev);
   EXT_9984_AutoOffset(pDev ); 
 	return WV_SOK;
 }
-
 
 /**********************************************************************************
 
@@ -286,6 +349,7 @@ WV_S32 EXT_9984_Dect(EXT_AD9984_DEV_E * pDev )
 		   EXT_FPGA_Write(0x2d,1); 
 		   
            pDev->formate = i;
+		   printf("*********set 9984 [%d]**************\n",i);
 		} 
     else
       {
@@ -301,7 +365,9 @@ WV_S32 EXT_9984_Dect(EXT_AD9984_DEV_E * pDev )
 
   return  WV_SOK;
 }
- 
+
+
+
 /**********************************************************************************
 
 WV_S32 EXT_9984_GetResolution(EXT_AD9984_DEV_E * pDev );

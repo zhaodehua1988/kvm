@@ -48,6 +48,7 @@ int KMV_MOUSE_SendChl(int chn ,unsigned char *pBuf,int len,unsigned char devType
 	else if(chn = 4)
 	{
 		//send to remote dev
+		//printf("mouse send  to remote \n");
 		KMV_UDP_ClientSend(pBuf,len,2,devType);
 	}
 	return 0;
@@ -95,12 +96,12 @@ int KMV_MOUSE_Proc(KMV_USB_DEVICE_INFO *pInfo){
 	char mouse_path[40];
 
 	sprintf(mouse_path,"%s%s",KMV_MOUSE_PATH,pInfo->handler);
-	//KMV_USB_printf("mouse path %s\n",mouse_path);
+	KMV_USB_printf("mouse path [%s]\n",mouse_path);
 
 		  
 	ret = access(mouse_path,F_OK);
 	if(ret == 0){
-		KMV_USB_printf("access ok\n");	
+		//KMV_USB_printf("access ok\n");	
 
 	}else{
 		KMV_USB_printf("access error \n");
@@ -112,10 +113,10 @@ int KMV_MOUSE_Proc(KMV_USB_DEVICE_INFO *pInfo){
 		KMV_USB_printf("open mouse dev error[%s]\n",mouse_path);
 		return -1;	
 	}else{
-		KMV_USB_printf("open mouse dev ok[%s]\n",mouse_path);
+		//KMV_USB_printf("open mouse dev ok[%s]\n",mouse_path);
 	}
 
-	//set mouse parameter
+	//set mouse parameter***
 	write(mouse_fd,mouse_parm,sizeof(mouse_parm));
 	pInfo->plug = 1;
 	while(1)

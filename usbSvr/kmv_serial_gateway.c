@@ -101,7 +101,7 @@ int  KMV_V_SERIAL_ChangeBaudRate(unsigned int baudRate,int port)
 ********************************************************/ 
 int  KMV_V_SERIAL_ChangeBaudRate(unsigned int baudRate,int chl)
 {
-
+	printf(" set uart chl %d baudRate %d \n",chl,baudRate);
 	EXT_FPGA_ConfUart(chl,baudRate,0,1);
 	//EXT_FPGA_ConfUart(WV_U8 chn,WV_U32 burd,WV_U32 check,WV_U32 stop)
 	return 0;
@@ -250,6 +250,11 @@ int  KMV_V_SERIAL_Init(KMV_V_SERIAL_DEV_E *pDev)
 		return SERIAL_ERR;
 	} 
 	KMV_SERIAL_printf("socket bind ok\n");
+
+	/*********set uart ***************/
+	int i;
+
+	//KMV_V_SERIAL_ChangeBaudRate(9600,pDev->chl);
 	return SERIAL_OK;
 }
 

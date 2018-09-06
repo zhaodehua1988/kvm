@@ -50,7 +50,7 @@ WV_S32  main()
 
 	 //
 	SVR_Open();
-	KMV_SERIAL_CONF_Open(); 
+	//KMV_SERIAL_CONF_Open(); 
 	KMV_V_SERIAL_Open();
 	TSK_SW_Init();	
 	KMV_USB_DEV_Open();
@@ -76,7 +76,7 @@ WV_S32  main()
 	TSK_UART_Close();
 	KMV_USB_DEV_Close();
 	KMV_V_SERIAL_Close();
-	KMV_SERIAL_CONF_Close();
+	//KMV_SERIAL_CONF_Close();
 	SVR_Close();
 	//	
      

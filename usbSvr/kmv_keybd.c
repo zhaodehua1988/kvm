@@ -257,7 +257,7 @@ int KMV_KEYBD_Proc(KMV_USB_DEVICE_INFO *pInfo){
 
 	char keybd_path[40];
 	sprintf(keybd_path,"%s%s",KMV_KEYBD_PATH,pInfo->handler);
-	//printf("kebd path [%s]\n",keybd_path);
+	printf("kebd path [%s]\n",keybd_path);
 	//access file
 	ret = access(keybd_path,F_OK);
 	if(ret == 0){

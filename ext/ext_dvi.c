@@ -22,6 +22,8 @@ typedef struct EXT_DVI_DEV_E
   WV_U8             edid[256];  
 }EXT_DVI_DEV_E ;
 
+static int gDviSwflag;//flag=1,sw is working,flag = 0 ,sw is free
+
 WV_U8  EXT_DIV_ISL_CfgData[]={
   /*
   0x03,0x12, //default 0x12,recommended 0x63,detect mode
@@ -236,8 +238,6 @@ WV_S32  EXT_DVI_IicDrvSel(EXT_DVI_DEV_E *pDev)
 	return WV_SOK;
 }
 
-
-
 /*****************************************************
 
 WV_S32  EXT_DVI_IicDrvDeSel(EXT_DVI_DEV_E *pDev);
@@ -250,7 +250,6 @@ WV_S32  EXT_DVI_IicDrvDeSel(EXT_DVI_DEV_E *pDev)
 	usleep(100000);
 	return WV_SOK;
 }
-
 
 /**********************************************************************************
 
@@ -291,7 +290,7 @@ WV_S32  EXT_DVI_EdidWrite(EXT_DVI_DEV_E * pDev ,WV_U8 chn)
   usleep(100000); 
   for(i=0;i<128;i++){
    		//WV_CHECK_RET(  HIS_IIC_Write8 (pDev-> iicHndl,0xa0, i,&Default_Dual_EDID[i], 1) );
-      //HIS_IIC_Write8 (pDev-> iicHndl,0xa0, i,&Default_Dual_EDID[i], 1);
+        //HIS_IIC_Write8 (pDev-> iicHndl,0xa0, i,&Default_Dual_EDID[i], 1);
    } 
    EXT_DVI_IicEdidDeSel(chn,pDev);
    EXT_DVI_IicInSel( chn,pDev);  
@@ -357,10 +356,15 @@ WV_S32 EXT_DVI_DrvInit(EXT_DVI_DEV_E * pDev )
   return WV_SOK;	
 }
 */
+/**********************************************************************************
+
+WV_S32 EXT_DVI_DrvInit(EXT_DVI_DEV_E * pDev );
+
+**********************************************************************************/
 WV_S32 EXT_DVI_DrvInit(EXT_DVI_DEV_E * pDev ) 
 { 
        WV_S32  i,j; 
-       printf("********************* dvi drvinit *******************\n");
+       printf("********************* dvi drv init *******************\n");
       EXT_DVI_IicDrvSel(pDev);
       usleep(10000); 
        for(i=0;i<4;i++)
@@ -369,12 +373,12 @@ WV_S32 EXT_DVI_DrvInit(EXT_DVI_DEV_E * pDev )
           for(j=0;j<sizeof(EXT_DIV_ISL_CfgData)/2;j++)
           {
            
-			EXT_DVI_IicWriteIsl(pDev,i*2,EXT_DIV_ISL_CfgData[j*2],EXT_DIV_ISL_CfgData[j*2+1]);  
+			EXT_DVI_IicWriteIsl(pDev,i*4,EXT_DIV_ISL_CfgData[j*2],EXT_DIV_ISL_CfgData[j*2+1]);  
           } 
           
          for(j=0;j<sizeof(EXT_DIV_ISL_CfgData)/2;j++)
           {
-           	EXT_DVI_IicWriteIsl(pDev,i*2+1,EXT_DIV_ISL_CfgData[j*2],EXT_DIV_ISL_CfgData[j*2+1]);
+           	EXT_DVI_IicWriteIsl(pDev,i*4+2,EXT_DIV_ISL_CfgData[j*2],EXT_DIV_ISL_CfgData[j*2+1]);
           } 
         	//EXT_DVI_IicWriteIsl(pDev,i*2+1,0x05,0x01); // clock out tri-stated  
 			//EXT_DVI_IicWriteIsl(pDev,i*2+1,0x03,0x67); // clock in tri-stated
@@ -498,7 +502,8 @@ WV_S32 EXT_DVI_DevOpen(EXT_DVI_DEV_E * pDev )
        usleep(10000);
        EXT_DVI_SwInit(pDev);
       WV_printf("DVI sw init ok \r\n");
-       
+      
+	gDviSwflag = 0; 
    return WV_SOK;	
 }
 
@@ -514,28 +519,6 @@ WV_S32 EXT_DVI_DevClose(EXT_DVI_DEV_E * pDev  )
    return WV_SOK;	
 }
 
-
-/*********************************************************************************
-
-WV_S32  EXT_DVI_SetSw(WV_U8  outChn, WV_U8  inChn, WV_U8 ena )
-
-*********************************************************************************/
-WV_S32  EXT_DVI_SetSw(WV_U8  outChn, WV_U8  inChn, WV_U8 ena )
-{
-
-	 if(ena == 1)
-    {
-      EXT_DVI_SwSetChn(&gDviDev ,inChn  ,outChn) ;
-    }
-    else
-    {
-      EXT_DVI_SwSetChn(&gDviDev ,5  ,outChn) ; 
-    }
-    return WV_SOK; 
-}
-
-
-
 /****************************************************************************
 
 WV_S32 EXT_DVI_GetSw(WV_U8 *pSw)
@@ -550,6 +533,43 @@ WV_S32 EXT_DVI_GetSw(WV_U8 *pSw)
 	}
 	return 0;
 }
+/*********************************************************************************
+
+WV_S32  EXT_DVI_SetSw(WV_U8  outChn, WV_U8  inChn, WV_U8 ena )
+
+*********************************************************************************/
+WV_S32  EXT_DVI_SetSw(WV_U8  outChn, WV_U8  inChn, WV_U8 ena )
+{
+	
+	//printf("dvi set sw out[%d] in[%d] ena[%d]\n",outChn,inChn,ena);
+	if(gDviSwflag == 0)
+	{
+		//printf("111 dvi set sw out[%d] in[%d] ena[%d]\n",outChn,inChn,ena);
+		gDviSwflag = 1;
+		WV_S8 sw[5];
+		WV_S8 key=0;
+		
+		EXT_DVI_GetSw(sw);
+		EXT_FPGA_SendKB(sw[outChn],&key,1);//pop all key
+
+		if(ena == 1)
+		{
+			EXT_DVI_SwSetChn(&gDviDev ,inChn  ,outChn);
+		}
+		else
+		{
+			EXT_DVI_SwSetChn(&gDviDev ,5  ,outChn); 
+		}
+		
+		gDviSwflag = 0;
+		
+	}else{
+		WV_printf(" dvi set sw is working,please Wait a few seconds...\n ");
+		return WV_EFAIL;
+	}
+    return WV_SOK; 
+}
+
 /****************************************************************************
 
 WV_S32 EXT_DVI_CMDGet(WV_S32 argc, WV_S8 **argv,WV_S8 *prfBuff)

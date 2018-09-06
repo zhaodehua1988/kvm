@@ -201,11 +201,13 @@ int KMV_SVR_CMD_ChangeVGA(SVR_HEAD_E *pHead,unsigned char *pBuf)
 	
     ret = EXT_VGA_SetSw(pBuf[2],pBuf[1],pBuf[3]);
 
-	if(pBuf[1] == 4)
+	if(pBuf[2] == 4)
 	{
-		KMV_USB_DEV_changeRemoteChn(0,pBuf[2],0);
+		KMV_USB_DEV_changeRemoteChn(0,pBuf[1],0);
 	}
+	
 	KMV_USB_DEV_ChlSw(pBuf[2],pBuf[1],pBuf[3],0);
+	
 	KMV_SVR_CMD_Ask(pHead,pBuf,ret);
 	return SVR_OK;
 }
@@ -220,13 +222,13 @@ int KMV_SVR_CMD_ChangeDVI(SVR_HEAD_E *pHead,unsigned char *pBuf)
 	int ret = 0;
 	KMV_SVR_printf("svr cmd change DVI in[%d] to out[%d] ena[%d] \n",pBuf[1],pBuf[2],pBuf[3]);
     ret = EXT_DVI_SetSw(pBuf[2],pBuf[1],pBuf[3]);
-	if(pBuf[1] == 4)
+	if(pBuf[2] == 4)
 	{
-		KMV_USB_DEV_changeRemoteChn(1,pBuf[2],0);
+		KMV_USB_DEV_changeRemoteChn(1,pBuf[1],0);
 	}
 
 	KMV_USB_DEV_ChlSw(pBuf[2],pBuf[1],pBuf[3],1);
-
+	
 	KMV_SVR_CMD_Ask(pHead,pBuf,ret);
 	return SVR_OK;
 }
@@ -295,6 +297,30 @@ int KMV_SVR_CMD_ChangeAudio(SVR_HEAD_E *pHead,unsigned char *pBuf)
 	return SVR_OK;
 }
 
+int KMV_SVR_CMD_ChangeUART(SVR_HEAD_E *pHead,unsigned char *pBuf)
+{
+		int ret = 0;
+	KMV_SVR_printf("svr cmd change UART baud ");
+//	ret = EXT_3268_SetMic(pBuf[1] ,pBuf[3]);
+
+	unsigned int num; // 0 1 2 3 
+	unsigned int baudRate;
+	unsigned int checkBit;
+	unsigned int dataBit;
+	unsigned int stopBit;
+
+	baudRate = *(unsigned int*)&pBuf[2];
+	num     = pBuf[1];
+	checkBit = 0;
+	dataBit = 8;
+	stopBit = 1;	
+	printf("change com %d baud %d \n",num,baudRate);
+	ret = EXT_FPGA_ConfUart(num,baudRate,checkBit,stopBit); 
+	
+	KMV_SVR_CMD_Ask(pHead,pBuf,ret);
+	return SVR_OK;
+}
+
 /************************************************************
 
 int KMV_SVR_CMD_ChangeMouse(SVR_HEAD_E *pHead,unsigned char *pBuf);
@@ -308,7 +334,6 @@ int KMV_SVR_CMD_ChangeMouse(SVR_HEAD_E *pHead,unsigned char *pBuf)
 	KMV_SVR_CMD_Ask(pHead,pBuf,ret);
 	return SVR_OK;
 }
-
 /************************************************************
 
 int KMV_SVR_CMD_ChangeDecodeChn(SVR_HEAD_E *pHead,unsigned char *pBuf);
@@ -442,7 +467,6 @@ int KMV_SVR_CMD_Proc(SVR_HEAD_E *pHead,unsigned char *pBuf)
 			//set uart port 2
 			KMV_SVR_CMD_SetUartPort2(pHead,pBuf);
 			break;
-
 		case KMV_SVR_CMD_UART_PORT3:
 			//set uart port 3
 			KMV_SVR_CMD_SetUartPort3(pHead,pBuf);
@@ -483,6 +507,10 @@ int KMV_SVR_CMD_Proc(SVR_HEAD_E *pHead,unsigned char *pBuf)
 			break;
 		case KMV_SVR_CMD_AUDIO_CHANGE:
 			KMV_SVR_CMD_ChangeAudio(pHead,pBuf);
+			break;
+
+		case KMV_SVR_CMD_UART_SET:
+			KMV_SVR_CMD_ChangeUART(pHead,pBuf);
 			break;
 		case KMV_SVR_CMD_SEARCH_INFO:
 			//search info

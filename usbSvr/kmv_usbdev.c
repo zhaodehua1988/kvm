@@ -67,7 +67,7 @@ int KMV_USB_DEV_changeRemoteChn(int devType,int chl,int level)
 			break;
 		case KMV_USB_DEV_TYPE_DVI:
 			usb_RemoteChnDvi = chl;
-			printf("change dvi remote mouse to [%d]\n",usb_RemoteChnVga);
+			printf("change dvi remote mouse to [%d]\n",usb_RemoteChnDvi);
 			break;
 		default:
 			break;		
@@ -260,99 +260,91 @@ int KMV_USB_DEV_SetGroupChl(char *pDevName,char chn)
 
 	WV_S32 ret,i;	
 	if(strncmp(pDevName, gUsbDev_1.usbDevInfo[0].physDev,KMV_USB_DEVICE_DATAMAX_LEN) == 0){	
-		for(i=0;i<KMV_USB_DEV_INFO_MAX_NUM;i++)
+		if(EXT_DVI_SetSw(0,chn,1) == 0)
 		{
-			gUsbDev_1.usbDevInfo[i].chn = chn;
-			gUsbDev_1.usbDevInfo[i].ena = 1;
+			for(i=0;i<KMV_USB_DEV_INFO_MAX_NUM;i++)
+			{
+				gUsbDev_1.usbDevInfo[i].chn = chn;
+				gUsbDev_1.usbDevInfo[i].ena = 1;	
 
-			//gUsbDev_2.usbDevInfo.chn = chn;
-			EXT_DVI_SetSw(0,chn,1);
-			//EXT_VGA_SetSw(0, chn,1); 
-			//KMV_USB_DEV_ChlSw(0,chn,1);
+			}
 		}
-	
 	}else if(strncmp(pDevName, gUsbDev_2.usbDevInfo[0].physDev,KMV_USB_DEVICE_DATAMAX_LEN) == 0){
-		
-		for(i=0;i<KMV_USB_DEV_INFO_MAX_NUM;i++)
+		if(EXT_VGA_SetSw(0, chn,1) == 0)
 		{
-			//gUsbDev_1.usbDevInfo.chn = chn;
-			gUsbDev_2.usbDevInfo[i].chn = chn;
-			gUsbDev_2.usbDevInfo[i].ena = 1;
-			//EXT_DVI_SetSw(0,chn,1); 
-			EXT_VGA_SetSw(0, chn,1);
-			//KMV_USB_DEV_ChlSw(0,chn,1);
-		}
-  		
-	}else if(strncmp(pDevName, gUsbDev_3.usbDevInfo[0].physDev,KMV_USB_DEVICE_DATAMAX_LEN) == 0){
-	
-		for(i=0;i<KMV_USB_DEV_INFO_MAX_NUM;i++)
-		{
-			gUsbDev_3.usbDevInfo[i].chn = chn;
-			gUsbDev_3.usbDevInfo[i].ena = 1;
-			//gUsbDev_4.usbDevInfo.chn = chn;
-			EXT_DVI_SetSw(1,chn,1); 
-			//EXT_VGA_SetSw(1, chn,1);
-			//KMV_USB_DEV_ChlSw(1,chn,1);   
-		}
+			for(i=0;i<KMV_USB_DEV_INFO_MAX_NUM;i++)
+			{
 
+				gUsbDev_2.usbDevInfo[i].chn = chn;
+				gUsbDev_2.usbDevInfo[i].ena = 1;
+			
+			}
+  		}
+	}else if(strncmp(pDevName, gUsbDev_3.usbDevInfo[0].physDev,KMV_USB_DEVICE_DATAMAX_LEN) == 0){
+		if(EXT_DVI_SetSw(1,chn,1) == 0)
+		{
+			for(i=0;i<KMV_USB_DEV_INFO_MAX_NUM;i++)
+			{
+				gUsbDev_3.usbDevInfo[i].chn = chn;
+				gUsbDev_3.usbDevInfo[i].ena = 1;
+				 
+			}
+		}
 	}else if(strncmp(pDevName, gUsbDev_4.usbDevInfo[0].physDev,KMV_USB_DEVICE_DATAMAX_LEN) == 0){
 	
-		for(i=0;i<KMV_USB_DEV_INFO_MAX_NUM;i++)
+		if(EXT_VGA_SetSw(1, chn,1) == 0)
 		{
-			//gUsbDev_3.usbDevInfo.chn = chn;
-			gUsbDev_4.usbDevInfo[i].chn = chn;
-			gUsbDev_4.usbDevInfo[i].ena = 1;
-
-			//EXT_DVI_SetSw(1,chn,1);
-			EXT_VGA_SetSw(1, chn,1);
-			//KMV_USB_DEV_ChlSw(1,chn,1);  
+			for(i=0;i<KMV_USB_DEV_INFO_MAX_NUM;i++)
+			{
+				gUsbDev_4.usbDevInfo[i].chn = chn;
+				gUsbDev_4.usbDevInfo[i].ena = 1;
+			
+			}
 		}
 	
 	}else if(strncmp(pDevName, gUsbDev_5.usbDevInfo[0].physDev,KMV_USB_DEVICE_DATAMAX_LEN) == 0){
 
-		for(i=0;i<KMV_USB_DEV_INFO_MAX_NUM;i++)
+		if(EXT_DVI_SetSw(2,chn,1) == 0)
 		{
-			gUsbDev_5.usbDevInfo[i].chn = chn;
-			gUsbDev_5.usbDevInfo[i].ena = 1;
-			//gUsbDev_6.usbDevInfo.chn = chn;
-			EXT_DVI_SetSw(2,chn,1);
-			//EXT_VGA_SetSw(2, chn,1);
-			//KMV_USB_DEV_ChlSw(2,chn,1); 
+			for(i=0;i<KMV_USB_DEV_INFO_MAX_NUM;i++)
+			{
+				gUsbDev_5.usbDevInfo[i].chn = chn;
+				gUsbDev_5.usbDevInfo[i].ena = 1;
+			
+			}
 		}
 	
 	}else if(strncmp(pDevName, gUsbDev_6.usbDevInfo[0].physDev,KMV_USB_DEVICE_DATAMAX_LEN) == 0){
-
-		for(i=0;i<KMV_USB_DEV_INFO_MAX_NUM;i++)
+		if(EXT_VGA_SetSw(2, chn,1) == 0)
 		{
-			//gUsbDev_5.usbDevInfo.chn = chn;
-			gUsbDev_6.usbDevInfo[i].chn = chn;
-			gUsbDev_6.usbDevInfo[i].ena = 1;
-
-			//EXT_DVI_SetSw(2,chn,1);
-			EXT_VGA_SetSw(2, chn,1);
-			//KMV_USB_DEV_ChlSw(2,chn,1);    
+			for(i=0;i<KMV_USB_DEV_INFO_MAX_NUM;i++)
+			{
+				gUsbDev_6.usbDevInfo[i].chn = chn;
+				gUsbDev_6.usbDevInfo[i].ena = 1;
+				  
+			}
 		}
 	}else if(strncmp(pDevName, gUsbDev_7.usbDevInfo[0].physDev,KMV_USB_DEVICE_DATAMAX_LEN) == 0){
-	
-		for(i=0;i<KMV_USB_DEV_INFO_MAX_NUM;i++)
-		{	
-			gUsbDev_7.usbDevInfo[i].chn = chn;
-			gUsbDev_7.usbDevInfo[i].ena = 1;
-			//gUsbDev_8.usbDevInfo.chn = chn;
-			EXT_DVI_SetSw(3,chn,1); 
-			//EXT_VGA_SetSw(3, chn,1);
-			//KMV_USB_DEV_ChlSw(3,chn,1); 
+
+		if(EXT_DVI_SetSw(3,chn,1) == 0)
+		{ 
+			for(i=0;i<KMV_USB_DEV_INFO_MAX_NUM;i++)
+			{	
+				gUsbDev_7.usbDevInfo[i].chn = chn;
+				gUsbDev_7.usbDevInfo[i].ena = 1;
+			
+			}
 		}
 	}else if(strncmp(pDevName, gUsbDev_8.usbDevInfo[0].physDev,KMV_USB_DEVICE_DATAMAX_LEN) == 0){
-		
-		for(i=0;i<KMV_USB_DEV_INFO_MAX_NUM;i++)
-		{
-			//gUsbDev_7.usbDevInfo.chn = chn;
-			gUsbDev_8.usbDevInfo[i].chn = chn;
-			gUsbDev_8.usbDevInfo[i].ena = 1;
-			//EXT_DVI_SetSw(3,chn,1); 
-			EXT_VGA_SetSw(3, chn,1); 
-			//KMV_USB_DEV_ChlSw(3,chn,1);
+
+		if(EXT_VGA_SetSw(3, chn,1) == 0)
+		{		
+			for(i=0;i<KMV_USB_DEV_INFO_MAX_NUM;i++)
+			{
+				gUsbDev_8.usbDevInfo[i].chn = chn;
+				gUsbDev_8.usbDevInfo[i].ena = 1;
+
+			}
 		}
 	}
 
@@ -400,33 +392,35 @@ int KMV_USB_DEV_SetChl(KMV_USB_DEVICE_INFO *pInfo,unsigned char *pBuf,int len)
 					KMV_USB_printf("change chn to 3\n");
 					break;
 				case 0x3e://ctrl +F5
-					KMV_KEYBD_PopAllKey(pInfo);
-					KMV_USB_DEV_SetGroupChl(pInfo->physDev,4);
-					//set remote server addr
+					//KMV_KEYBD_PopAllKey(pInfo);
+					//chang remote chl
 					buf[0] = 0;
-
 					KMV_UDP_ClientSend(buf,1,1,pInfo->devType);//KMV_UDP_ClientSend(char *buf,int len,unsigned char cmd)
+					//set local chl
+					KMV_USB_DEV_SetGroupChl(pInfo->physDev,4);
 					KMV_USB_printf("change chn to remote 0\n");
 					break;
 				case 0x3f://ctrl+F6
-					KMV_KEYBD_PopAllKey(pInfo);
-					KMV_USB_DEV_SetGroupChl(pInfo->physDev,4);
+					//KMV_KEYBD_PopAllKey(pInfo);
 					buf[0] = 1;
 					KMV_UDP_ClientSend(buf,1,1,pInfo->devType);
+					KMV_USB_DEV_SetGroupChl(pInfo->physDev,4);
 					KMV_USB_printf("change chn to remote 1\n");
 					break;
 				case 0x40://ctrl+F7
-					KMV_KEYBD_PopAllKey(pInfo);
-					KMV_USB_DEV_SetGroupChl(pInfo->physDev,4);
+					//KMV_KEYBD_PopAllKey(pInfo);
 					buf[0] = 2;
 					KMV_UDP_ClientSend(buf,1,1,pInfo->devType);
+
+					KMV_USB_DEV_SetGroupChl(pInfo->physDev,4);
 					KMV_USB_printf("change chn to remote 2\n");
 					break;
 				case 0x41://ctrl+F8
-					KMV_KEYBD_PopAllKey(pInfo);
-					KMV_USB_DEV_SetGroupChl(pInfo->physDev,4);
+					//_KEYBD_PopAllKey(pInfo);
 					buf[0] = 3;
 					KMV_UDP_ClientSend(buf,1,1,pInfo->devType);
+
+					KMV_USB_DEV_SetGroupChl(pInfo->physDev,4);
 					KMV_USB_printf("change chn to remote 3\n");
 					break;
 				default :
@@ -450,89 +444,6 @@ char * KMV_USB_DEV_GetDevName(const char*pLocal,const char *pDes)
 {
 
 	return strstr(pLocal,pDes);
-}
-
-/************************************************************
-
-int KMV_USB_DEV_GetInfo(KMV_USB_DEVICE_INFO *pInfo);
-
-*************************************************************/
-int KMV_USB_DEV_GetInfo(KMV_USB_DEVICE_INFO *pInfo)
-{
-	FILE *fp;
-	char buf[1024];
-	int state = 0;
-	fp=fopen(KMV_USB_DEV_INFO_PATH,"r");
-	if(fp==NULL)
-	{
-		
-		return -1;
-	}
-	pInfo->name = -1;
-	while(fgets(buf,1024,fp))
-	{
-		
-		//get name
-		if(buf[0] == 'N')
-		{
-			if(KMV_USB_DEV_GetDevName(buf,KMV_USB_KEYBD_NAME) != NULL){
-
-				pInfo->name = KMV_USB_KEYBD_NAME_ID;
-				
-
-			}else if(KMV_USB_DEV_GetDevName(buf,KMV_USB_MOUSE_NAME) != NULL){
-
-				pInfo->name = KMV_USB_MOUSE_NAME_ID;
-			}else{
-				pInfo->name = -1;
-			}
-
-
-		}
-		//compare usbDev physId
-		if(buf[0] == 'P')
-		{
-			if(strncmp(&buf[8],pInfo->physDev,20) == 0)
-			{
-				KMV_USB_printf("dev name %s\n",pInfo->physDev);
-				state = 1;
-				printf("find dev\n");
-				
-			}else{
-				pInfo->name = -1;
-				//KMV_USB_printf("not found \n");
-			}
-		}
-		//get handlers
-		if(state == 1){
-
-			while(fgets(buf,1024,fp)){
-					if(buf[0] == 'H'){
-						if(pInfo->name == KMV_USB_KEYBD_NAME_ID){
-							
-							if(strncmp(&buf[12],"kbd",3) == 0){
-								memcpy(pInfo->handler,&buf[16],6);
-								KMV_USB_printf("keyBd get handle:%s\n",pInfo->handler);
-								break;
-							}
-						}else if(pInfo->name == KMV_USB_MOUSE_NAME_ID){
-								memcpy(pInfo->handler,&buf[12],6);
-								KMV_USB_printf("mouse get handle:%s\n",pInfo->handler);
-								break;
-								
-						}else{
-							
-							break;
-						}
-				}			
-					
-			}
-			break;
-		}
-	}
-	fclose(fp);
-	return 0;
-
 }
 
 /************************************************************
@@ -585,7 +496,8 @@ int KMV_USB_DEV_GetInfo2(KMV_USB_DEVICE_INFO *pInfo)
 		if(state == 1){
 			
 			while(fgets(buf,1024,fp)){
-				//printf("111buf=[%s]\n",buf);
+				//printf("111buf=[%s],len %d \n",buf,strlen(buf)-17);
+				
 					if(buf[0] == 'H'){
 
 						  if(strncmp(&buf[12],"kbd",3) == 0){
@@ -594,7 +506,7 @@ int KMV_USB_DEV_GetInfo2(KMV_USB_DEVICE_INFO *pInfo)
 								
 								for(j=0;j<KMV_USB_DEV_INFO_MAX_NUM;j++)
 								{
-									if(strncmp(&buf[16],pInfo[j].handler,6) == 0 )
+									if(strncmp(&buf[16],pInfo[j].handler,strlen(buf)-18) == 0 )
 									{
 										pInfo[i].name = -1;
 										//KMV_USB_printf("buf[%s]there is have the handler [%s],Info[%d].hand,Info[%d].name=[%d]\n",buf,pInfo[j].handler,j,i,pInfo[i].name);
@@ -609,7 +521,7 @@ int KMV_USB_DEV_GetInfo2(KMV_USB_DEVICE_INFO *pInfo)
 									//printf("*********there is have the handler [%s],Info[%d].hand\n",pInfo[j].handler,j);
 									break;
 								}
-								memcpy(pInfo[i].handler,&buf[16],6);
+								memcpy(pInfo[i].handler,&buf[16],strlen(buf)-18);
 								//KMV_USB_printf("2222222keyBd get pInfo[%d].handle:%s,pInfo[%d].name=[%d]\n",i,pInfo[i].handler,i,pInfo[i].name);
 								
 							}else if(strncmp(&buf[12],"mouse",5) == 0){
@@ -637,6 +549,7 @@ int KMV_USB_DEV_GetInfo2(KMV_USB_DEVICE_INFO *pInfo)
 				
 					//continue;
 				}//end if(buf[0] == 'H')
+							
 				if(pInfo[i].name != -1){
 					if(strncmp(buf,"B: EV=",6) == 0)
 					{
@@ -676,14 +589,14 @@ int KMV_USB_DEV_GetInfo2(KMV_USB_DEVICE_INFO *pInfo)
 
 /************************************************************
 
-void * KMV_USB_DEV_Proc(void *prm);
+void * KMV_USB_GET_Proc(void *prm);
 
 *************************************************************/
 void * KMV_USB_GET_Proc(void *prm)
 {
 
+	pthread_detach(pthread_self());
 	KMV_USB_DEVICE_INFO *pInfo;
-
 	pInfo = (KMV_USB_DEVICE_INFO *)prm;
 	if(pInfo->name == KMV_USB_KEYBD_NAME_ID){
 		 KMV_KEYBD_Proc(pInfo);
